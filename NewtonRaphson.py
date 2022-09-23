@@ -19,10 +19,10 @@ def NewtonRaphson(f, df, u0, a_tol=1.e-8, max_it=10, dt=1.0):
 		dfu = df(u)
 
 		du = lg.solve(dfu, -fu)
-		u = u + dt*dt
+		u = u + dt*du
 
 		fu = f(u)
 		i += 1
 
 	res = Result(u, a_tol, max_it, lg.norm(fu), i, i < max_it)
-	return res.__dict__
+	return res
