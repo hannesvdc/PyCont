@@ -68,17 +68,15 @@ def test2():
 		return 0
 
 if __name__ == '__main__':
-	n_tests = 0
+	n_tests = 2
 	good_tests = 0
 
 	print("Test 1")
 	res1 = test1()
-	n_tests += 1
 	good_tests += res1
 
 	print("\nTest 2")
 	res2 = test2()
-	n_tests += 1
 	good_tests += res2
 
 	print("\n\nSuccessfull Tests:", good_tests, "/", n_tests, '!')
