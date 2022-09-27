@@ -7,7 +7,7 @@ from autograd import jacobian
 
 import PyCont.NewtonRaphson as nr
 
-def continuation(f, dfdu, dfdp, u0, p0, ds, N, a_tol=1.e-8, max_it=10, verbose=False):
+def continuation(f, dfdu, dfdp, u0, p0, ds_max, ds, N, a_tol=1.e-8, max_it=10, verbose=False):
 	print('\t', '  ', "\t\t\t", 'u', '\t\t', 'p')
 	sign = 1.0
 	m = u0.size
@@ -18,21 +18,15 @@ def continuation(f, dfdu, dfdp, u0, p0, ds, N, a_tol=1.e-8, max_it=10, verbose=F
 	for n in range(1, N+1):
 		AB = " R" if n < N else "EP"
 
-		# Compute the derivatives duds and dpds
+		# Predictor step:
+		# Compute d(u, p)/ds for time-stepping
 		fu = dfdu(u, p)
 		fp = dfdp(u, p)
 		duds, dpds = _computeDerivatives(fu, fp, sign)
 
-		# Test for folds at the current point
-		is_fold = _testFold(dpds)
-		if is_fold:
-			if verbose:
-				print("Fold Point detected!")
-			sign = -sign
-			AB = "FP"
-
-		# Corrector step: create the system and solve it with the newton-raphson method.
-		u, p = _nextStep(f, u, p, duds, dpds, ds, m, verbose)
+		# Corrector step: 
+		# create the system and solve it with the newton-raphson method.
+		u, p, ds = _adaptiveStepping(f, u, p, duds, dpds, ds, ds_max, m, verbose)
 		samples.append(np.concatenate((u, p)))
 		print(n, '\t', AB, "\t\t", u, '\t', p, '\t')
 
@@ -45,7 +39,7 @@ def _computeDerivatives(fu, fp, sign):
 
 	return duds, dpds
 
-def _nextStep(f, u0, p0, duds, dpds, ds, m, verbose):
+def _adaptiveStepping(f, u0, p0, duds, dpds, ds, m, verbose):
 	# Create the non-linear system
 	def G(x):
 		u_x = x[0:m]
@@ -58,19 +52,19 @@ def _nextStep(f, u0, p0, duds, dpds, ds, m, verbose):
 		return res
 	dG = jacobian(G)
 
-	# Setup initial point
-	x0 = np.concatenate((u0 + duds*ds, p0 + dpds*ds))
-	nr_result = nr.NewtonRaphson(G, dG, x0, max_it=10)
-	if verbose:
-		print('# Iterations', nr_result.iterations, nr_result.error, nr_result.success)
-	if nr_result.success is False:
-		print('NR Failed at', x0, dpds, duds)
+	# Do adaptive timestepping
+	while True:
+		x0 = np.concatenate((u0 + duds*ds, p0 + dpds*ds))
+		nr_result = nr.NewtonRaphson(G, dG, x0, max_it=10)
 
-	u = nr_result.x[0:m]
-	p = nr_result.x[m:m+1]
+		u = None
+		p = None
+		if nr_result.success is True:
+			ds = 1.2*ds
+			u = nr_result.x[0:m]
+			p = nr_result.x[m:m+1]
+			break
+		else:
+			ds = 0.5*ds
 
-	return u, p
-
-def _testFold(dpds):
-	fold_tol = 1.e-5
-	return np.abs(dpds) < fold_tol
+	return u, p, ds
