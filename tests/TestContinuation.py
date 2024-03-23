@@ -25,7 +25,7 @@ def FoldTest():
 	ax = fig.gca()
 	ax.plot(r_path, u_path[0], color='blue', label='Numerical Continuation')
 	ax.set_xlabel(r'$r$')
-	ax.set_label(r'$u$')
+	ax.set_ylabel(r'$u$')
 	ax.legend()
 	plt.show()	
 

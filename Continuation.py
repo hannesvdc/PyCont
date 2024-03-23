@@ -3,6 +3,7 @@ sys.path.append('../')
 
 import autograd.numpy as np
 import autograd.numpy.linalg as lg
+import scipy.optimize as opt
 from autograd import jacobian
 
 import NewtonRaphson as nr
@@ -55,14 +56,16 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 				ds = min(1.2*ds, ds_max)
 				prev_tau = np.copy(tau)
 				break
-			ds = max(0.5*ds, ds_min)
+			elif result.singular:
+				# Find the bifurcation point by solving det(dF) = 0
+				det_df = lambda x: lg.det(dF(x))
+				x_singular = opt.fsolve(det_df, x_p)
+				print('Bifurcation Point at', x_singular, '. Aborting')
 
-		else:
-			# For Now, just return at a bifurcation point. We will implement
-			# branch switching later.
-			print('Bifurcation Point Appproximately at', u, p)
-			print('Aborting')
-			return np.array(u_path), np.array(p_path)
+				return np.array(u_path), np.array(p_path)
+
+			# Decrease arclength if Newton routine needs more than max_it steps
+			ds = max(0.5*ds, ds_min)
 		
 		print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)
