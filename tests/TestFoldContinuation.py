@@ -18,7 +18,7 @@ def FoldTest():
 	ds_min = 1.e-6
 	ds = 0.1
 	N = 5000
-	u_path, r_path = cont.continuation(f, dfdx, dfdr, u0, p0, ds_min, ds_max, ds, N, max_it=10, sign=1.0)
+	u_path, r_path, bifurcation_points = cont.continuation(f, dfdx, dfdr, u0, p0, ds_min, ds_max, ds, N, max_it=10, sign=1.0)
 	u_path = np.transpose(u_path)
 
 	fig = plt.figure()

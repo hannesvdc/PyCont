@@ -22,29 +22,48 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 
 	# Choose intial tangent (guess). Users can specify a sign for a
 	# particular continuation direction
-	prev_tau = np.zeros(M+1)
-	prev_tau[M] = -sign
+	prev_tangent = np.zeros(M+1)
+	prev_tangent[M] = -sign
+
+	# Variables for bifurcation detection
+	rng = rd.RandomState()
+	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
+	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
+	prev_tau_test = 0.0
 	bifurcation_points = []
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
 		Gu = dGdu(u, p)
 		Gp = dGdp(u, p)
-		tau = _computeTangent(Gu, Gp, prev_tau, M, a_tol)
+		tangent = _computeTangent(Gu, Gp, prev_tangent, M, a_tol)
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
 			# Predictor step;
 			# compute initial value for Newton-Raphson method
-			u_p = u + tau[0:M] * ds
-			p_p = p + tau[M]   * ds
+			u_p = u + tangent[0:M] * ds
+			p_p = p + tangent[M]   * ds
 			x_p = np.append(u_p, p_p)
 
-			# Corrector step: 
-			# create the system and solve it with the newton-raphson method.
-			N = lambda x: np.dot(tau, x - np.append(u, p)) + ds
+			# create the extended system and test for bifurcation points
+			N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
 			F = lambda x: np.append(G(x[0:M], x[M]), N(x))
 			dF = jacobian(F)
+			tau_test = tau_bifurcation(dF, x_p, l, r, M)
+
+			# Test for bifurcation point
+			if prev_tau_test * tau_test < 0.0: # Bifurcation point detected
+				x_singular = _findBifurcationPoint(dF, x_p, l, r, M, a_tol)
+
+				# Also test the Jacobian to be sure
+				if lg.norm(x_singular - x_p) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
+					bifurcation_points.append(x_singular)
+					print('Bifurcation Point at', x_singular, '. Aborting')
+
+				#return np.array(u_path), np.array(p_path), bifurcation_points
+
+			# Corrector step: Newton-Raphson
 			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it, testCondition=True)
 
 			# Adaptive timestepping
@@ -56,14 +75,9 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 
 				# Updating the arclength step and tangent vector
 				ds = min(1.2*ds, ds_max)
-				prev_tau = np.copy(tau)
+				prev_tangent = np.copy(tangent)
+				prev_tau_test = tau_test
 				break
-			elif result.singular:
-				x_singular = _findBifurcationPoint(F, dF, x_p, M, a_tol)
-				bifurcation_points.append(x_singular)
-				print('Bifurcation Point at', x_singular, '. Aborting')
-
-				return np.array(u_path), np.array(p_path), bifurcation_points
 
 			# Decrease arclength if Newton routine needs more than max_it steps
 			ds = max(0.5*ds, ds_min)
@@ -86,20 +100,19 @@ def _computeTangent(Gu, Gp, prev_tau, M, a_tol):
 
 	return tau
 
-def _findBifurcationPoint(F, dF, x_p, M, a_tol):
-	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
-	rng = rd.RandomState()
-	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
-	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
-	def tau_test(x):
-		sys = np.zeros((M+2, M+2))
-		sys[0:(M+1),0:(M+1)] = dF(x); sys[0:(M+1), M+1]= r; sys[M+1, 0:(M+1)] = l
-		rhs = np.zeros(M+2); rhs[M+1] = 1.0
-		y = lg.solve(sys, rhs)
+def tau_bifurcation(dF, x, l, r, M):
+	sys = np.zeros((M+2, M+2))
+	sys[0:(M+1),0:(M+1)] = dF(x)
+	sys[0:(M+1), M+1]= r
+	sys[M+1, 0:(M+1)] = l
+	rhs = np.zeros(M+2); rhs[M+1] = 1.0
+	y = lg.solve(sys, rhs)
 
-		return y[M+1]
-	
-	min_functional = lambda x: tau_test(x)**2
+	return y[M+1]
+
+def _findBifurcationPoint(dF, x_p, l, r, M, a_tol):
+	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
+	min_functional = lambda x: tau_bifurcation(dF, x, l, r, M)**2
 	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
 	x_singular = min_result.x
 	return x_singular
