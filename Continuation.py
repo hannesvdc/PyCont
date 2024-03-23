@@ -3,26 +3,28 @@ sys.path.append('../')
 
 import autograd.numpy as np
 import autograd.numpy.linalg as lg
+import autograd.numpy.random as rd
 import scipy.optimize as opt
+import scipy.linalg as slg
 from autograd import jacobian
 
 import NewtonRaphson as nr
 
-def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_it=10, verbose=False):
+def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_it=10, sign=1.0):
 	M = u0.size
 	u = np.copy(u0) # Always the previous point on the curve
 	p = np.copy(p0)	# Always the previous point on the curve
 	u_path = [u]
 	p_path = [p]
 
-	print(u, p)
 	print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(0, lg.norm(u), p)
 	print(print_str)
 
-	# Choose random initial for now.
+	# Choose intial tangent (guess). Users can specify a sign for a
+	# particular continuation direction
 	prev_tau = np.zeros(M+1)
-	prev_tau[M] = -1.0
-	print('intial norm',  lg.norm(prev_tau))
+	prev_tau[M] = -sign
+	bifurcation_points = []
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
@@ -43,7 +45,7 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 			N = lambda x: np.dot(tau, x - np.append(u, p)) + ds
 			F = lambda x: np.append(G(x[0:M], x[M]), N(x))
 			dF = jacobian(F)
-			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it)
+			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it, testCondition=True)
 
 			# Adaptive timestepping
 			if result.success:
@@ -57,10 +59,11 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 				prev_tau = np.copy(tau)
 				break
 			elif result.singular:
-				x_singular = _findBifurcationPoint(dF, x_p)
+				x_singular = _findBifurcationPoint(F, dF, x_p, M, a_tol)
+				bifurcation_points.append(x_singular)
 				print('Bifurcation Point at', x_singular, '. Aborting')
 
-				return np.array(u_path), np.array(p_path)
+				return np.array(u_path), np.array(p_path), bifurcation_points
 
 			# Decrease arclength if Newton routine needs more than max_it steps
 			ds = max(0.5*ds, ds_min)
@@ -68,7 +71,7 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 		print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)
 
-	return np.array(u_path), np.array(p_path)
+	return np.array(u_path), np.array(p_path), bifurcation_points
 
 def _computeTangent(Gu, Gp, prev_tau, M, a_tol):
 	# Setup extended jacobian
@@ -79,12 +82,24 @@ def _computeTangent(Gu, Gp, prev_tau, M, a_tol):
 	# Do a version of quadratic programming (can we implement QP?)
 	g_tangent = lambda tau: np.append(np.dot(DG, tau), np.dot(tau, tau) - 1.0)
 	dg_tangent = jacobian(g_tangent)
-	tau = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
+	tau = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol, testCondition=False).x
 
 	return tau
 
-def _findBifurcationPoint(dF, x_p):
-	# Find the bifurcation point by solving det(dF) = 0
-	det_df = lambda x: lg.det(dF(x))
-	x_singular = opt.fsolve(det_df, x_p)
+def _findBifurcationPoint(F, dF, x_p, M, a_tol):
+	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
+	rng = rd.RandomState()
+	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
+	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
+	def tau_test(x):
+		sys = np.zeros((M+2, M+2))
+		sys[0:(M+1),0:(M+1)] = dF(x); sys[0:(M+1), M+1]= r; sys[M+1, 0:(M+1)] = l
+		rhs = np.zeros(M+2); rhs[M+1] = 1.0
+		y = lg.solve(sys, rhs)
+
+		return y[M+1]
+	
+	min_functional = lambda x: tau_test(x)**2
+	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
+	x_singular = min_result.x
 	return x_singular
