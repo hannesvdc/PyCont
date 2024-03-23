@@ -1,12 +1,12 @@
 import sys
-sys.path.append("../../")
+sys.path.append("../")
 
 import autograd.numpy as np
 import autograd.numpy.linalg as lg
 import autograd.numpy.random as rd
-from autograd import grad, jacobian
+from autograd import jacobian
 
-import PyCont.NewtonRaphson as nr
+import NewtonRaphson as nr
 
 # Find the zeros of sin(x) = x, this is a second order zero, only linear convergence
 def test1():

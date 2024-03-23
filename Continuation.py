@@ -5,66 +5,79 @@ import autograd.numpy as np
 import autograd.numpy.linalg as lg
 from autograd import jacobian
 
-import PyCont.NewtonRaphson as nr
+import NewtonRaphson as nr
 
-def continuation(f, dfdu, dfdp, u0, p0, ds_max, ds, N, a_tol=1.e-8, max_it=10, verbose=False):
-	print('\t', '  ', "\t\t\t", 'u', '\t\t', 'p')
-	sign = 1.0
-	m = u0.size
-	samples = []
+def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_it=10, verbose=False):
+	M = u0.size
+	u = np.copy(u0) # Always the previous point on the curve
+	p = np.copy(p0)	# Always the previous point on the curve
+	u_path = [u]
+	p_path = [p]
 
-	u = np.copy(u0)
-	p = np.copy(p0)
+	print(u, p)
+	print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(0, lg.norm(u), p)
+	print(print_str)
+
+	# Choose random initial for now.
+	prev_tau = np.zeros(M+1)
+	prev_tau[M] = -1.0
+	print('intial norm',  lg.norm(prev_tau))
 	for n in range(1, N+1):
-		AB = " R" if n < N else "EP"
+		# Determine the tangent to the curve at current point
+		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
+		Gu = dGdu(u, p)
+		Gp = dGdp(u, p)
+		tau = _computeTangent(Gu, Gp, prev_tau, M, a_tol)
 
-		# Predictor step:
-		# Compute d(u, p)/ds for time-stepping
-		fu = dfdu(u, p)
-		fp = dfdp(u, p)
-		duds, dpds = _computeDerivatives(fu, fp, sign)
+		# Our implementation uses adaptive timetepping
+		while ds > ds_min:
+			# Predictor step;
+			# compute initial value for Newton-Raphson method
+			u_p = u + tau[0:M] * ds
+			p_p = p + tau[M]   * ds
+			x_p = np.append(u_p, p_p)
 
-		# Corrector step: 
-		# create the system and solve it with the newton-raphson method.
-		u, p, ds = _adaptiveStepping(f, u, p, duds, dpds, ds, ds_max, m, verbose)
-		samples.append(np.concatenate((u, p)))
-		print(n, '\t', AB, "\t\t", u, '\t', p, '\t')
+			# Corrector step: 
+			# create the system and solve it with the newton-raphson method.
+			N = lambda x: np.dot(tau, x - np.append(u, p)) + ds
+			F = lambda x: np.append(G(x[0:M], x[M]), N(x))
+			dF = jacobian(F)
+			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it)
 
-	return samples
+			# Adaptive timestepping
+			if result.success:
+				u = np.copy(result.x[0:M])
+				p = result.x[M]
+				u_path.append(u)
+				p_path.append(p)
 
-def _computeDerivatives(fu, fp, sign):
-	dudp = lg.solve(fu, -fp)
-	dpds = sign*np.sqrt(np.dot(dudp, dudp) + 1.0)
-	duds = dudp * dpds
+				# Updating the arclength step and tangent vector
+				ds = min(1.2*ds, ds_max)
+				prev_tau = np.copy(tau)
+				break
+			ds = max(0.5*ds, ds_min)
 
-	return duds, dpds
-
-def _adaptiveStepping(f, u0, p0, duds, dpds, ds, m, verbose):
-	# Create the non-linear system
-	def G(x):
-		u_x = x[0:m]
-		p_x = x[m:m+1]
-
-		eq1 = f(u_x, p_x)
-		eq2 = np.dot(u_x - u0, duds) + (p_x - p0)*dpds - ds
-		res = np.concatenate((eq1, eq2))
-
-		return res
-	dG = jacobian(G)
-
-	# Do adaptive timestepping
-	while True:
-		x0 = np.concatenate((u0 + duds*ds, p0 + dpds*ds))
-		nr_result = nr.NewtonRaphson(G, dG, x0, max_it=10)
-
-		u = None
-		p = None
-		if nr_result.success is True:
-			ds = 1.2*ds
-			u = nr_result.x[0:m]
-			p = nr_result.x[m:m+1]
-			break
 		else:
-			ds = 0.5*ds
+			# For Now, just return at a bifurcation point. We will implement
+			# branch switching later.
+			print('Bifurcation Point Appproximately at', u, p)
+			print('Aborting')
+			return np.array(u_path), np.array(p_path)
+		
+		print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(n, lg.norm(u), p)
+		print(print_str)
 
-	return u, p, ds
+	return np.array(u_path), np.array(p_path)
+
+def _computeTangent(Gu, Gp, prev_tau, M, a_tol):
+	# Setup extended jacobian
+	DG = np.zeros((M,M+1)) 
+	DG[0:M, 0:M] = Gu
+	DG[:,M] = Gp
+
+	# Do a version of quadratic programming (can we implement QP?)
+	g_tangent = lambda tau: np.append(np.dot(DG, tau), np.dot(tau, tau) - 1.0)
+	dg_tangent = jacobian(g_tangent)
+	tau = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
+
+	return tau
