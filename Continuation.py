@@ -57,9 +57,7 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 				prev_tau = np.copy(tau)
 				break
 			elif result.singular:
-				# Find the bifurcation point by solving det(dF) = 0
-				det_df = lambda x: lg.det(dF(x))
-				x_singular = opt.fsolve(det_df, x_p)
+				x_singular = _findBifurcationPoint(dF, x_p)
 				print('Bifurcation Point at', x_singular, '. Aborting')
 
 				return np.array(u_path), np.array(p_path)
@@ -84,3 +82,9 @@ def _computeTangent(Gu, Gp, prev_tau, M, a_tol):
 	tau = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
 
 	return tau
+
+def _findBifurcationPoint(dF, x_p):
+	# Find the bifurcation point by solving det(dF) = 0
+	det_df = lambda x: lg.det(dF(x))
+	x_singular = opt.fsolve(det_df, x_p)
+	return x_singular
