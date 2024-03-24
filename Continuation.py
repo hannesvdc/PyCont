@@ -38,6 +38,11 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 		Gp = dGdp(u, p)
 		tangent = _computeTangent(Gu, Gp, prev_tangent, M, a_tol)
 
+		# Create the extended system for corrector
+		N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
+		F = lambda x: np.append(G(x[0:M], x[M]), N(x))
+		dF = jacobian(F)
+
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
 			# Predictor step;
@@ -46,13 +51,8 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 			p_p = p + tangent[M]   * ds
 			x_p = np.append(u_p, p_p)
 
-			# create the extended system and test for bifurcation points
-			N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
-			F = lambda x: np.append(G(x[0:M], x[M]), N(x))
-			dF = jacobian(F)
-			tau_test = tau_bifurcation(dF, x_p, l, r, M)
-
 			# Test for bifurcation point
+			tau_test = tau_bifurcation(dF, x_p, l, r, M)
 			if prev_tau_test * tau_test < 0.0: # Bifurcation point detected
 				x_singular = _findBifurcationPoint(dF, x_p, l, r, M, a_tol)
 
@@ -61,14 +61,12 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 					bifurcation_points.append(x_singular)
 					print('Bifurcation Point at', x_singular, '. Aborting')
 
-				#return np.array(u_path), np.array(p_path), bifurcation_points
-
 			# Corrector step: Newton-Raphson
 			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it, testCondition=True)
 
 			# Adaptive timestepping
 			if result.success:
-				u = np.copy(result.x[0:M])
+				u = result.x[0:M]
 				p = result.x[M]
 				u_path.append(u)
 				p_path.append(p)
