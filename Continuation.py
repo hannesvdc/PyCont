@@ -45,8 +45,7 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
-			# Predictor step;
-			# compute initial value for Newton-Raphson method
+			# Predictor: Extrapolation
 			u_p = u + tangent[0:M] * ds
 			p_p = p + tangent[M]   * ds
 			x_p = np.append(u_p, p_p)
@@ -54,14 +53,14 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 			# Test for bifurcation point
 			tau_test = tau_bifurcation(dF, x_p, l, r, M)
 			if prev_tau_test * tau_test < 0.0: # Bifurcation point detected
-				x_singular = _findBifurcationPoint(dF, x_p, l, r, M, a_tol)
+				x_singular = _computeBifurcationPoint(dF, x_p, l, r, M, a_tol)
 
 				# Also test the Jacobian to be sure
 				if lg.norm(x_singular - x_p) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
 					bifurcation_points.append(x_singular)
 					print('Bifurcation Point at', x_singular, '. Aborting')
 
-			# Corrector step: Newton-Raphson
+			# Corrector: Newton-Raphson
 			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it, testCondition=True)
 
 			# Adaptive timestepping
@@ -77,7 +76,7 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-8, max_
 				prev_tau_test = tau_test
 				break
 
-			# Decrease arclength if Newton routine needs more than max_it steps
+			# Decrease arclength if Newton routine needs more than max_it iterations
 			ds = max(0.5*ds, ds_min)
 		
 		print_str = 'Step n :{0:3d}\t u :{1:4f}\t p :{2:4f}'.format(n, lg.norm(u), p)
@@ -108,7 +107,7 @@ def tau_bifurcation(dF, x, l, r, M):
 
 	return y[M+1]
 
-def _findBifurcationPoint(dF, x_p, l, r, M, a_tol):
+def _computeBifurcationPoint(dF, x_p, l, r, M, a_tol):
 	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
 	min_functional = lambda x: tau_bifurcation(dF, x, l, r, M)**2
 	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
