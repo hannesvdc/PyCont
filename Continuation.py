@@ -28,7 +28,6 @@ def continuation(G, dGdu, dGdp, u0, p0, ds_min, ds_max, ds, N, a_tol=1.e-10, max
 	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
 	prev_tau_bifurcation = 0.0
 	bifurcation_points = []
-	fold_points = []
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
