@@ -1,9 +1,12 @@
 import autograd.numpy as np
+import scipy
 import scipy.linalg as lg
 import scipy.optimize as opt
 from autograd import jacobian
 
 import NewtonRaphson as nr
+
+np.seterr(all='ignore')
 
 def _computeNullspace(Gu, Gp):
     ns = lg.null_space(Gu)
@@ -30,13 +33,16 @@ def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
     GxGx = jacobian(Gx_w)
     c = np.dot(phi, np.dot(GxGx(x_s), w_1))
 
+    print(a, b, c)
     return a, b, c
 
 def _solveABSystem(a, b, c):
     solutions = []
     f = lambda alpha: a*alpha**2 + 2.0*b*alpha*np.sqrt(1.0 - alpha**2) + c*(1.0 - alpha**2)
     alpha_1 = opt.fsolve(f, 0.5)[0] # for some reason, the output of fsolve is an array
-    alpha_2 = np.sqrt(1.0 - alpha_1**2)
+    f_deflated = lambda alpha: f(alpha) / (alpha - alpha_1)
+    alpha_2 = opt.fsolve(f_deflated, 1.0 - alpha_1)[0] # Use 1 - alpha_1 as initial condition for now. Can we calculate alpha_2 analytically?
+    print('alpha', alpha_1, alpha_2, f(alpha_1), f(alpha_2))
 
     solutions.append(np.array([ alpha_1,  np.sqrt(1.0 - alpha_1**2)]))
     solutions.append(np.array([ alpha_2,  np.sqrt(1.0 - alpha_2**2)]))
