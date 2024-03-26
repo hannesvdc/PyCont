@@ -8,11 +8,12 @@ import NewtonRaphson as nr
 def _computeNullspace(Gu, Gp):
     ns = lg.null_space(Gu)
     phi = ns[:,0]
-    w = lg.solve(Gu, Gp)
+
+    Gu_pinv = lg.pinv(Gu)
+    w = np.dot(Gu_pinv, -Gp)
     w_1 = np.append(w, 1.0)
 
     return phi, w, w_1
-
 
 def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
     # Compute a
@@ -29,36 +30,35 @@ def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
     GxGx = jacobian(Gx_w)
     c = np.dot(phi, np.dot(GxGx(x_s), w_1))
 
-    print(a, b, c)
-    print('Sanity check', b**2 - a*c)
+    return a, b, c
 
 def _solveABSystem(a, b, c):
     solutions = []
     f = lambda alpha: a*alpha**2 + 2.0*b*alpha*np.sqrt(1.0 - alpha**2) + c*(1.0 - alpha**2)
-    alpha_1 = opt.fsolve(f, 0.0, x_tol=1.e-10)
-    f_deflated = lambda alpha: f(alpha) / (alpha - alpha_1)
-    alpha_2 = opt.fsolve(f_deflated, 0.0, x_tol=1.e-10)
+    alpha_1 = opt.fsolve(f, 0.5)[0] # for some reason, the output of fsolve is an array
+    alpha_2 = np.sqrt(1.0 - alpha_1**2)
 
     solutions.append(np.array([ alpha_1,  np.sqrt(1.0 - alpha_1**2)]))
     solutions.append(np.array([ alpha_2,  np.sqrt(1.0 - alpha_2**2)]))
     solutions.append(np.array([-alpha_1, -np.sqrt(1.0 - alpha_1**2)]))
     solutions.append(np.array([-alpha_2, -np.sqrt(1.0 - alpha_2**2)]))
 
-    # Sanity check on solutions
-    f_full = lambda alpha, beta: [a*alpha**2 + 2.0*b*alpha*beta + c*beta**2, alpha**2+beta**2-1.0]
-    for n in range(len(solutions)):
-        print(f_full(solutions[n][0], solutions[n][1]))
-
     return solutions
 
 def branchSwitching(F, Gu, Gp, x_s, x_prev):
+    # Setting up variables
     M = x_s.size - 1
-    phi, w, w_1 =_computeNullspace(Gu, Gp)
-    a, b, c = _computeCoefficients(Gu, Gp, x_s, phi, w, w_1)
+    u = x_s[0:M]
+    p = x_s[M]
+
+    # Computing necessary coefficients and vectors
+    phi, w, w_1 =_computeNullspace(Gu(u,p), Gp(u,p))
+    a, b, c = _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M)
     solutions = _solveABSystem(a, b, c)
 
+    # Fina all 4 branch tangents
     directions = []
-    for n in len(solutions):
+    for n in range(len(solutions)):
         alpha = solutions[n][0]
         beta  = solutions[n][1]
 
@@ -70,19 +70,19 @@ def branchSwitching(F, Gu, Gp, x_s, x_prev):
         tangent = np.append(alpha*phi + beta/np.sqrt(2.0)*w, beta/np.sqrt(2.0))
         x0 = x_s + s * tangent
         res = nr.Newton(F_branch, dF_branch, x0)
-        print('res', res)
 
         directions.append(res.x)
 
-    # Remove the direction where we came from
-    inner_prodct = 1.0
+    #Remove the direction where we came from
+    inner_prodct = -np.inf
     for n in range(len(directions)):
         inner_pd = np.dot(directions[n]-x_s, x_prev-x_s) / (lg.norm(directions[n]-x_s) * lg.norm(x_prev-x_s))
-        if inner_pd < inner_prodct:
-            inner_pd = inner_prodct
+        if inner_pd > inner_prodct:
+            inner_prodct = inner_pd
             idx = n
     directions.pop(idx)
 
+    # Returning 3 contnuation directions
     return directions
     
 
