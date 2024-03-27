@@ -4,7 +4,7 @@ sys.path.append("../")
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 
-import Continuation as cont
+import src.PseudoArclengthContinuation as cont
 
 def PitchforkTest():
 	G = lambda x, r: r*x[0] - x[0]**3

@@ -50,7 +50,7 @@ def _solveABSystem(a, b, c):
 
     return solutions
 
-def branchSwitching(F, Gu, Gp, x_s, x_prev):
+def branchSwitching(F, Gu, Gp, x_s, x_prev): # F = (G, N)
     # Setting up variables
     M = x_s.size - 1
     u = x_s[0:M]
