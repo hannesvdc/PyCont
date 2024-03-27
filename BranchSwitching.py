@@ -1,5 +1,4 @@
 import autograd.numpy as np
-import scipy
 import scipy.linalg as lg
 import scipy.optimize as opt
 from autograd import jacobian
