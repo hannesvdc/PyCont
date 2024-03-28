@@ -1,18 +1,27 @@
 import autograd.numpy as np
 import scipy.linalg as lg
 import scipy.optimize as opt
+import scipy as sc
+
 from autograd import jacobian
 
 import NewtonRaphson as nr
 
 np.seterr(all='ignore')
+sc.special.seterr(all='ignore')
 
-def _computeNullspace(Gu, Gp):
-    ns = lg.null_space(Gu)
-    phi = ns[:,0]
+# Minimizing the residual of a system is more stable than finding the exact nullspace
+def _computeNullspace(Gu, Gp, M):
+    phi_0 = np.eye(M)[:,0]
+    phi_objective = lambda y: 0.5*np.dot(np.dot(Gu, y), np.dot(Gu, y))
+    phi_constraint = opt.NonlinearConstraint(lambda y: np.dot(y, y) - 1.0, 0.0, 0.0)
+    min_result = opt.minimize(phi_objective, phi_0, constraints=(phi_constraint))
+    phi = min_result.x
 
-    Gu_pinv = lg.pinv(Gu)
-    w = np.dot(Gu_pinv, -Gp)
+    #Gu_pinv = lg.pinv(Gu)
+    w_objective = lambda y: np.sqrt(np.dot(np.dot(Gu, y) + Gp, np.dot(Gu, y) + Gp))
+    min_result = opt.minimize(w_objective, np.zeros(M))
+    w = min_result.x
     w_1 = np.append(w, 1.0)
 
     return phi, w, w_1
@@ -32,13 +41,13 @@ def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
     GxGx = jacobian(Gx_w)
     c = np.dot(phi, np.dot(GxGx(x_s), w_1))
 
-    print(a, b, c)
+    print('abc', a, b, c)
     return a, b, c
 
 def _solveABSystem(a, b, c):
     solutions = []
     f = lambda alpha: a*alpha**2 + 2.0*b*alpha*np.sqrt(1.0 - alpha**2) + c*(1.0 - alpha**2)
-    alpha_1 = opt.fsolve(f, 0.5)[0] # for some reason, the output of fsolve is an array
+    alpha_1 = opt.fsolve(f, 0.4)[0] # for some reason, the output of fsolve is an array
     f_deflated = lambda alpha: f(alpha) / (alpha - alpha_1)
     alpha_2 = opt.fsolve(f_deflated, 1.0 - alpha_1)[0] # Use 1 - alpha_1 as initial condition for now. Can we calculate alpha_2 analytically?
     print('alpha', alpha_1, alpha_2, f(alpha_1), f(alpha_2))
@@ -55,9 +64,10 @@ def branchSwitching(F, Gu, Gp, x_s, x_prev): # F = (G, N)
     M = x_s.size - 1
     u = x_s[0:M]
     p = x_s[M]
+    print('singular point', u, p)
 
     # Computing necessary coefficients and vectors
-    phi, w, w_1 =_computeNullspace(Gu(u,p), Gp(u,p))
+    phi, w, w_1 =_computeNullspace(Gu(u,p), Gp(u,p), M)
     a, b, c = _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M)
     solutions = _solveABSystem(a, b, c)
 
@@ -67,7 +77,7 @@ def branchSwitching(F, Gu, Gp, x_s, x_prev): # F = (G, N)
         alpha = solutions[n][0]
         beta  = solutions[n][1]
 
-        s = 0.1
+        s = 0.001
         N = lambda x: np.dot(alpha*phi + beta/np.sqrt(2.0)*w, x[0:M] - x_s[0:M]) + beta/np.sqrt(2.0)*(x[M] - x_s[M]) + s
         F_branch = lambda x: np.append(F(x)[0:M], N(x))
         dF_branch = jacobian(F_branch)

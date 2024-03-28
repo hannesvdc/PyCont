@@ -18,28 +18,27 @@ def PitchforkTest():
 	N = 10000
 	u0 = np.array([0.0])
 	p0 = -5.0
-	u_path_1, r_path_1, bifurcation_points_1 = cont.continuation(G, dGdx, dGdr, u0, p0, ds_min, ds_max, ds, N, max_it=10, sign=1.0)
-	u_path_1 = np.transpose(u_path_1)
+	continuation_result = cont.pseudoArclengthContinuation(G, dGdx, dGdr, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
-	N = 20000
-	u0 = np.array([-3.0])
-	p0 = 9.0
-	u_path_2, r_path_2, bifurcation_points_2 = cont.continuation(G, dGdx, dGdr, u0, p0, ds_min, ds_max, ds, N, max_it=10, sign=-1.0)
-	u_path_2 = np.transpose(u_path_2)
+	# Print some Internal info
+	print('\nNumber of Branches:', len(continuation_result.branches))
+	print('Bifurcation Points:', continuation_result.bifurcation_points)
 
 	fig = plt.figure()
 	ax = fig.gca()
-	ax.plot(r_path_1, u_path_1[0], color='blue', label='Pitchfork Bifurcation')
-	ax.plot(r_path_2, u_path_2[0], color='blue')
-	for n in range(len(bifurcation_points_1)):
-		ax.plot(bifurcation_points_1[n][0], bifurcation_points_1[n][1], 'ro')
-	for n in range(len(bifurcation_points_2)):
-		ax.plot(bifurcation_points_2[n][0], bifurcation_points_2[n][1], 'ro')
+	x_grid = np.linspace(-16, 11, 1001)
+	y_grid = np.linspace(-3.5, 3.5, 1001)
+	ax.plot(x_grid, 0.0*x_grid, 'lightgray')
+	ax.plot(0.0*y_grid, y_grid, 'lightgray')
+	for n in range(len(continuation_result.branches)):
+		branch = continuation_result.branches[n]
+		ax.plot(branch['p'], branch['u'], 'blue')
+	ax.plot(p0, u0, 'go', label='SP')
+	for n in range(len(continuation_result.bifurcation_points)):
+		ax.plot(continuation_result.bifurcation_points[n][1], continuation_result.bifurcation_points[n][0], 'ro', label='BP')
 	ax.set_xlabel(r'$r$')
 	ax.set_ylabel(r'$u$')
-	plt.xlim((min(np.min(r_path_1), np.min(r_path_2))-1.0, max(np.max(r_path_1), np.max(r_path_2))+1.0))
-	plt.ylim((min(np.min(u_path_1), np.min(u_path_2))-1.0, max(np.max(u_path_1), np.max(u_path_2))+1.0))
-	ax.legend()
+	ax.legend(loc='upper left')
 	plt.show()	
 
 if __name__ == '__main__':

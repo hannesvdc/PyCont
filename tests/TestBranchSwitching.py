@@ -4,7 +4,7 @@ sys.path.append("../")
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 
-import src.BranchSwitching as bs
+import internal.BranchSwitching as bs
 
 def PitchforkTest():
 	G = lambda x, r: r*x[0] - x[0]**3

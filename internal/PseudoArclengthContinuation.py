@@ -17,11 +17,9 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 	print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(0, lg.norm(u), p)
 	print(print_str)
 
-	# Choose intial tangent (guess). Users can specify a sign for a
-	# particular continuation direction
-	#prev_tangent = np.zeros(M+1)
-	#prev_tangent[M] = -sign
-	prev_tangent = np.copy(initial_tangent)
+	# Choose intial tangent (guess). No idea why yet, but we need to
+	# negate the tangent to find the actual search direction
+	prev_tangent = -initial_tangent / lg.norm(initial_tangent)
 
 	# Variables for bifurcation detection
 	rng = rd.RandomState()

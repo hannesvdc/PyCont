@@ -28,7 +28,8 @@ def pseudoArclengthContinuation(G, Gu, Gp, u0, p0, ds_min, ds_max, ds_0, N, tole
     return result
 
 def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N, tolerance, result):
-
+    print('\n\nContinuation on Branch', len(result.branches)+1)
+    
     # Do regular continuation on this branch
     u_path, p_path, bf_points = pac.continuation(G, Gu, Gp, u0, p0, tangent, ds_min, ds_max, ds, N, a_tol=tolerance, max_it=10)
     u_path = np.transpose(u_path)[0]
@@ -53,4 +54,4 @@ def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N,
     # For each of the branches, run pseudo-arclength continuation
     for n in range(len(directions)):
         x0 = directions[n]
-        _recursiveContinuation(G, Gu, Gp, x0[0:M], p0[M], x0 - x_singular, ds_min, ds_max, ds, N, tolerance, result)
+        _recursiveContinuation(G, Gu, Gp, x0[0:M], x0[M], x0 - x_singular, M, ds_min, ds_max, ds, N, tolerance, result)
