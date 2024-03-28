@@ -45,6 +45,7 @@ def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N,
         if lg.norm(x_singular - result.bifurcation_points[n]) / M < 1.e-4:
             return
     result.bifurcation_points.append(x_singular)
+    print('Bifurcation Point at', x_singular)
         
     # The bifurcation point is unique, do branch switching
     x_prev = np.append(u_path[-5], p_path[-5]) # x_prev just needs to be a point on the previous path

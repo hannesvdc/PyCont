@@ -47,7 +47,6 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 			# Also test the Jacobian to be sure
 			if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
 				bifurcation_points.append(x_singular)
-				print('Bifurcation Point at', x_singular)
 
 				# Return and do branch switching
 				return u_path, p_path, bifurcation_points

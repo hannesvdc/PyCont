@@ -10,6 +10,9 @@ import NewtonRaphson as nr
 np.seterr(all='ignore')
 sc.special.seterr(all='ignore')
 
+def _is_zero(x):
+    return np.abs(x) < 1.e-4
+
 # Minimizing the residual of a system is more stable than finding the exact nullspace
 def _computeNullspace(Gu, Gp, M):
     phi_0 = np.eye(M)[:,0]
@@ -47,9 +50,26 @@ def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
 def _solveABSystem(a, b, c):
     solutions = []
     f = lambda alpha: a*alpha**2 + 2.0*b*alpha*np.sqrt(1.0 - alpha**2) + c*(1.0 - alpha**2)
-    alpha_1 = opt.fsolve(f, 0.4)[0] # for some reason, the output of fsolve is an array
-    f_deflated = lambda alpha: f(alpha) / (alpha - alpha_1)
-    alpha_2 = opt.fsolve(f_deflated, 1.0 - alpha_1)[0] # Use 1 - alpha_1 as initial condition for now. Can we calculate alpha_2 analytically?
+
+    # We go through separate cases
+    if _is_zero(a) and _is_zero(c):
+        alpha_1 = 0.0
+        alpha_2 = 1.0
+    elif _is_zero(c):
+        alpha_1 = 0.0
+        g = lambda alpha: a*alpha + 2.0*b*np.sqrt(1.0 - alpha**2)
+        alpha_2 = opt.fsolve(g, 0.5)[0]
+    elif _is_zero(a):
+        alpha_1 = 0.0
+        g = lambda alpha: 2.0*b*alpha + c*np.sqrt(1.0 - alpha**2)
+        alpha_2 = opt.fsolve(g, 0.5)[0]
+    elif _is_zero(a - c):
+        alpha_1 = opt.fsolve(f, 0.0)[0]
+        alpha_2 = np.sqrt(1.0 - alpha_1**2)
+    else:
+        alpha_1 = opt.fsolve(f, 0.0)[0] # for some reason, the output of fsolve is an array
+        f_deflated = lambda alpha: f(alpha) / (alpha - alpha_1)
+        alpha_2 = opt.fsolve(f_deflated, 1.0 - alpha_1)[0] # Use 1 - alpha_1 as initial condition for now. Can we calculate alpha_2 analytically?
     print('alpha', alpha_1, alpha_2, f(alpha_1), f(alpha_2))
 
     solutions.append(np.array([ alpha_1,  np.sqrt(1.0 - alpha_1**2)]))
@@ -64,7 +84,6 @@ def branchSwitching(F, Gu, Gp, x_s, x_prev): # F = (G, N)
     M = x_s.size - 1
     u = x_s[0:M]
     p = x_s[M]
-    print('singular point', u, p)
 
     # Computing necessary coefficients and vectors
     phi, w, w_1 =_computeNullspace(Gu(u,p), Gp(u,p), M)
