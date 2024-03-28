@@ -44,11 +44,9 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 		if prev_tau_bifurcation * tau_bifurcation < 0.0: # Bifurcation point detected
 			x_singular = _computeBifurcationPoint(dF, np.append(u, p), l, r, M, a_tol)
 
-			# Also test the Jacobian to be sure
+			# Also test the Jacobian to be sure. If test succesful, return.
 			if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
 				bifurcation_points.append(x_singular)
-
-				# Return and do branch switching
 				return u_path, p_path, bifurcation_points
 
 		# Our implementation uses adaptive timetepping
@@ -59,7 +57,7 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 			x_p = np.append(u_p, p_p)
 
 			# Corrector: Newton-Raphson
-			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it, testCondition=True)
+			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it)
 
 			# Adaptive timestepping
 			if result.success:
@@ -95,7 +93,7 @@ def computeTangent(Gu, Gp, prev_tau, M, a_tol):
 	# Do a version of quadratic programming (can we implement QP?)
 	g_tangent = lambda tau: np.append(np.dot(DG, tau), np.dot(tau, tau) - 1.0)
 	dg_tangent = jacobian(g_tangent)
-	tangent = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol, testCondition=False).x
+	tangent = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
 
 	return tangent
 

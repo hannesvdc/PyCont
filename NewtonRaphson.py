@@ -12,17 +12,13 @@ class NewtonResult:
 		self.success = suc
 		self.singular = singular
 
-def Newton(f, df, u0, a_tol=1.e-8, max_it=10, dt=1.0, testCondition=False):
+def Newton(f, df, u0, a_tol=1.e-8, max_it=10, dt=1.0):
 	u = u0
 	fu = f(u)
 
 	i = 0
 	while lg.norm(fu) > a_tol and i < max_it:
 		dfu = df(u)
-		#if testCondition and lg.cond(dfu) > 1.e6:
-		#	print('Large condition numnber', lg.cond(dfu), '. Returning.')
-		#	return NewtonResult(u, a_tol, max_it, lg.norm(fu), i, False, singular=True)
-		 
 		du = lg.solve(dfu, -fu)
 		u = u + dt*du
 
