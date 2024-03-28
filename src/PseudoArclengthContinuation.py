@@ -51,6 +51,9 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 				bifurcation_points.append(x_singular)
 				print('Bifurcation Point at', x_singular)
 
+				# Return and do branch switching
+				return u_path, p_path, bifurcation_points
+
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
 			# Predictor: Extrapolation
@@ -76,6 +79,10 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 
 			# Decrease arclength if Newton routine needs more than max_it iterations
 			ds = max(0.5*ds, ds_min)
+		else:
+			# This case should never happpen under normal circumstances
+			print('Minimal Arclength Size is too large. Aborting.')
+			return u_path, p_path, bifurcation_points
 		
 		print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)
