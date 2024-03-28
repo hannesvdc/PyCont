@@ -2,8 +2,8 @@ import autograd.numpy as np
 import autograd.numpy.linalg as lg
 import autograd.numpy.random as rd
 
-import src.PseudoArclengthContinuation as pac
-import src.BranchSwitching as brs
+import internal.PseudoArclengthContinuation as pac
+import internal.BranchSwitching as brs
 
 class ContinuationResult:
     def __init__(self):

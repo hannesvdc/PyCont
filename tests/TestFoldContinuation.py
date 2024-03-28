@@ -4,7 +4,7 @@ sys.path.append("../")
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 
-import src.PseudoArclengthContinuation as cont
+import Continuation as cont
 
 def FoldTest():
 	f = lambda x, r: r + x[0]**2
@@ -18,14 +18,25 @@ def FoldTest():
 	ds_min = 1.e-6
 	ds = 0.1
 	N = 5000
-	u_path, r_path, _ = cont.continuation(f, dfdx, dfdr, u0, p0, ds_min, ds_max, ds, N, max_it=10, sign=1.0)
-	u_path = np.transpose(u_path)
+	continuation_result = cont.pseudoArclengthContinuation(f, dfdx, dfdr, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
+	# Print some Internal info
+	print('\nNumber of Branches:', len(continuation_result.branches))
+	print('Bifurcation Points:', continuation_result.bifurcation_points)
+
+	# Plot the curves
 	fig = plt.figure()
 	ax = fig.gca()
-	ax.plot(r_path, u_path[0], color='blue', label='Numerical Continuation')
+	x_grid = np.linspace(-80, 8, 1001)
+	y_grid = np.linspace(-9, 5, 1001)
+	ax.plot(x_grid, 0.0*x_grid, 'lightgray')
+	ax.plot(0.0*y_grid, y_grid, 'lightgray')
+	for n in range(len(continuation_result.branches)):
+		branch = continuation_result.branches[n]
+		ax.plot(branch['p'], branch['u'], 'blue')
+	ax.plot(p0, u0, 'go', label='SP')
 	ax.set_xlabel(r'$r$')
-	ax.set_ylabel(r'$u$')
+	ax.set_ylabel(r'$u$', rotation=0)
 	ax.legend()
 	plt.show()	
 

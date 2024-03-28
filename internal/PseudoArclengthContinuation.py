@@ -5,7 +5,7 @@ import scipy.optimize as opt
 from autograd import jacobian
 
 import NewtonRaphson as nr
-import TestFunctions as tf
+import internal.TestFunctions as tf
 
 def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, sign=1.0):
 	M = u0.size
