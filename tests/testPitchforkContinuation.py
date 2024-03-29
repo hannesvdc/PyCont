@@ -16,8 +16,8 @@ def PitchforkTest():
 	ds = 0.1
 
 	N = 10000
-	u0 = np.array([0.0])
-	p0 = -5.0
+	u0 = np.array([-2.0])
+	p0 = 4.0
 	continuation_result = cont.pseudoArclengthContinuation(G, dGdx, dGdr, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
 	# Print some Internal info

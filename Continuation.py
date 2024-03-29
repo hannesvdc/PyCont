@@ -48,9 +48,9 @@ def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N,
     print('Bifurcation Point at', x_singular)
         
     # The bifurcation point is unique, do branch switching
-    x_prev = np.append(u_path[-5], p_path[-5]) # x_prev just needs to be a point on the previous path
-    F = lambda x: np.append(G(x[0:M], x[M]), 0.0)
-    directions = brs.branchSwitching(F, Gu, Gp, x_singular, x_prev)
+    x_prev = np.append(u_path[-10], p_path[-10]) # x_prev just needs to be a point on the previous path
+    #F = lambda x: np.append(G(x[0:M], x[M]), 0.0)
+    directions = brs.branchSwitching(G, Gu, Gp, x_singular, x_prev)
 
     # For each of the branches, run pseudo-arclength continuation
     for n in range(len(directions)):
