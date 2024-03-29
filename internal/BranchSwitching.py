@@ -138,6 +138,7 @@ def branchSwitching(G, Gu, Gp, x_s, x_prev):
             inner_prodct = inner_pd
             idx = n
     directions.pop(idx)
+    print('directions', directions)
 
     # Returning 3 continuation directions
     return directions

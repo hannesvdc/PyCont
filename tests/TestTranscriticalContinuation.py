@@ -28,11 +28,12 @@ def TransCriticalTest():
 	ax = fig.gca()
 	x_grid = np.linspace(-10, 10, 1001)
 	y_grid = np.linspace(-7.5, 7.5, 1001)
+	linestyles = {True: '-', False: '--'}
 	ax.plot(x_grid, 0.0*x_grid, 'lightgray')
 	ax.plot(0.0*y_grid, y_grid, 'lightgray')
 	for n in range(len(continuation_result.branches)):
 		branch = continuation_result.branches[n]
-		ax.plot(branch['p'], branch['u'], 'blue')
+		ax.plot(branch['p'], branch['u'], 'blue', linestyle=linestyles[branch['is_stable']])
 	ax.plot(p0, u0, 'go', label='SP')
 	for n in range(len(continuation_result.bifurcation_points)):
 		ax.plot(continuation_result.bifurcation_points[n][1], continuation_result.bifurcation_points[n][0], 'ro', label='BP')

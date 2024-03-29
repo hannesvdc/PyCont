@@ -4,6 +4,8 @@ import autograd.numpy.random as rd
 
 import internal.PseudoArclengthContinuation as pac
 import internal.BranchSwitching as brs
+import internal.EigenFunctions as eigf
+
 
 class ContinuationResult:
     def __init__(self):
@@ -32,8 +34,9 @@ def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N,
     
     # Do regular continuation on this branch
     u_path, p_path, bf_points = pac.continuation(G, Gu, Gp, u0, p0, tangent, ds_min, ds_max, ds, N, a_tol=tolerance, max_it=10)
+    stability = eigf.is_stable(Gu, u_path, p_path)
     u_path = np.transpose(u_path)[0]
-    result.branches.append({'u': u_path, 'p': p_path})
+    result.branches.append({'u': u_path, 'p': p_path, 'is_stable': stability})
 
     # If there are no bifurcation points on this path, return
     if len(bf_points) == 0:
@@ -48,8 +51,7 @@ def _recursiveContinuation(G, Gu, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, N,
     print('Bifurcation Point at', x_singular)
         
     # The bifurcation point is unique, do branch switching
-    x_prev = np.append(u_path[-10], p_path[-10]) # x_prev just needs to be a point on the previous path
-    #F = lambda x: np.append(G(x[0:M], x[M]), 0.0)
+    x_prev = np.append(u_path[-10], p_path[-10]) # x_prev just needs to be a point on the previous path close to the bf point
     directions = brs.branchSwitching(G, Gu, Gp, x_singular, x_prev)
 
     # For each of the branches, run pseudo-arclength continuation

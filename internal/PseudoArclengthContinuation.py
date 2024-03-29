@@ -47,7 +47,7 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 			# Also test the Jacobian to be sure. If test succesful, return.
 			if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
 				bifurcation_points.append(x_singular)
-				return u_path, p_path, bifurcation_points
+				return np.array(u_path), np.array(p_path), bifurcation_points
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
