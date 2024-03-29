@@ -23,7 +23,6 @@ def _find_all_zeros(f):
         f_val = f(x)
 
         if f_val * prev_f_val <= 0.0:
-            print('Root Found', x)
             roots.append(x)
         prev_f_val = f_val
 
@@ -101,7 +100,8 @@ def _solveABSystem(a, b, c):
 
     return solutions
 
-def branchSwitching(G, Gu, Gp, x_s, x_prev): # F = (G, N)
+def branchSwitching(G, Gu, Gp, x_s, x_prev):
+    print('\nBranch Switching')
     # Setting up variables
     M = x_s.size - 1
     u = x_s[0:M]
@@ -118,7 +118,7 @@ def branchSwitching(G, Gu, Gp, x_s, x_prev): # F = (G, N)
         alpha = solutions[n][0]
         beta  = solutions[n][1]
 
-        s = 0.1
+        s = 0.01
         N = lambda x: np.dot(alpha*phi + beta/np.sqrt(1.0)*w, x[0:M] - x_s[0:M]) + beta/np.sqrt(1.0)*(x[M] - x_s[M]) + s
         F_branch = lambda x: np.append(G(x[0:M], x[M]), N(x))
         dF_branch = jacobian(F_branch)
@@ -137,7 +137,6 @@ def branchSwitching(G, Gu, Gp, x_s, x_prev): # F = (G, N)
         if inner_pd > inner_prodct:
             inner_prodct = inner_pd
             idx = n
-    print('directions', directions)
     directions.pop(idx)
 
     # Returning 3 continuation directions
