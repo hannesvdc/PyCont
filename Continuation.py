@@ -1,6 +1,5 @@
 import autograd.numpy as np
 import autograd.numpy.linalg as lg
-import autograd.numpy.random as rd
 
 import internal.PseudoArclengthContinuation as pac
 import internal.BranchSwitching as brs
@@ -13,7 +12,7 @@ class ContinuationResult:
         self.bifurcation_points = []
 
 def pseudoArclengthContinuation(G, Gu, Gp, u0, p0, ds_min, ds_max, ds_0, N, tolerance=1.e-10):
-    rng = rd.RandomState()
+    rng = np.random.RandomState()
     M = u0.size
     ds = ds_0
 

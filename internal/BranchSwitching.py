@@ -48,7 +48,7 @@ def _computeNullspace(Gu, Gp, M):
 def _computeCoefficients(Gu, Gp, x_s, phi, w, w_1, M):
     # Compute a
     Gu_phi = lambda x: np.dot(Gu(x[0:M], x[M]), phi)
-    Guu = jacobian(Gu_phi)
+    Guu = jacobian(Gu_phi) # Can we compute these cooefficients numerically?
     a = np.dot(phi, np.dot(Guu(x_s)[0:M, 0:M], phi))
 
     # Compute b
@@ -121,7 +121,7 @@ def branchSwitching(G, Gu, Gp, x_s, x_prev):
         s = 0.01
         N = lambda x: np.dot(alpha*phi + beta/np.sqrt(1.0)*w, x[0:M] - x_s[0:M]) + beta/np.sqrt(1.0)*(x[M] - x_s[M]) + s
         F_branch = lambda x: np.append(G(x[0:M], x[M]), N(x))
-        dF_branch = jacobian(F_branch)
+        dF_branch = jacobian(F_branch) # get rid of jacobian in the long run
 
         tangent = np.append(alpha*phi + beta/np.sqrt(1.0)*w, beta/np.sqrt(1.0))
         print('branch tangent', tangent, phi, w)

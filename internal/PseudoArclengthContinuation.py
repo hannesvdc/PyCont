@@ -37,7 +37,7 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 		# Create the extended system for corrector
 		N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
 		F = lambda x: np.append(G(x[0:M], x[M]), N(x))
-		dF = jacobian(F)
+		dF = jacobian(F) # Replace by analytic formula later
 
 		# Test for bifurcation point
 		tau_bifurcation = tf.test_fn_bifurcation(dF, np.append(u, p), l, r, M)
@@ -92,7 +92,7 @@ def computeTangent(Gu, Gp, prev_tau, M, a_tol):
 
 	# Do a version of quadratic programming (can we implement QP?)
 	g_tangent = lambda tau: np.append(np.dot(DG, tau), np.dot(tau, tau) - 1.0)
-	dg_tangent = jacobian(g_tangent)
+	dg_tangent = jacobian(g_tangent) # Compute derivative analytically/numerically in future
 	tangent = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
 
 	return tangent
