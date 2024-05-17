@@ -26,7 +26,6 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
 	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
 	prev_tau_bifurcation = 0.0
-	bifurcation_points = []
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
@@ -46,8 +45,7 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 
 			# Also test the Jacobian to be sure. If test succesful, return.
 			if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
-				bifurcation_points.append(x_singular)
-				return np.array(u_path), np.array(p_path), bifurcation_points
+				return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
@@ -77,12 +75,12 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 		else:
 			# This case should never happpen under normal circumstances
 			print('Minimal Arclength Size is too large. Aborting.')
-			return u_path, p_path, bifurcation_points
+			return u_path, p_path, []
 		
 		print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)
 
-	return np.array(u_path), np.array(p_path), bifurcation_points
+	return np.array(u_path), np.array(p_path), []
 
 def computeTangent(Gu, Gp, prev_tau, M, a_tol):
 	# Setup extended jacobian

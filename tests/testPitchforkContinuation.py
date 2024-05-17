@@ -29,8 +29,8 @@ def PitchforkTest():
 	x_grid = np.linspace(-16, 11, 1001)
 	y_grid = np.linspace(-3.5, 3.5, 1001)
 	linestyles = {True: '-', False: '--'}
-	ax.plot(x_grid, 0.0*x_grid, 'lightgray')
-	ax.plot(0.0*y_grid, y_grid, 'lightgray')
+	ax.plot(x_grid, 0.0*x_grid, color='lightgray')
+	ax.plot(0.0*y_grid, y_grid, color='lightgray')
 	for n in range(len(continuation_result.branches)):
 		branch = continuation_result.branches[n]
 		ax.plot(branch['p'], branch['u'], color='blue', linestyle=linestyles[branch['is_stable']])
