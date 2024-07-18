@@ -142,6 +142,3 @@ def branchSwitching(G, Gu, Gp, x_s, x_prev):
 
     # Returning 3 continuation directions
     return directions
-    
-
-    
