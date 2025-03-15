@@ -3,9 +3,7 @@ import numpy.linalg as lg
 import numpy.random as rd
 import scipy.sparse.linalg as slg
 import scipy.optimize as opt
-from autograd import jacobian
 
-import NewtonRaphson as nr
 import internal.TestFunctions as tf
 
 """
@@ -32,7 +30,8 @@ def computeTangent(u, p, Gu_v, Gp, prev_tau, M, a_tol):
 		tangent = -tangent
 	return tangent
 
-def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, sign=1.0):
+def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10):
+	r_diff = 1.e-8
 	M = u0.size
 	u = np.copy(u0) # Always the previous point on the curve
 	p = np.copy(p0)	# Always the previous point on the curve
@@ -50,7 +49,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 	rng = rd.RandomState()
 	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
 	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
-	prev_tau_bifurcation = 0.0
+	prev_tau_bifurcation_value = 0.0
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		tangent = computeTangent(u, p, Gu_v, Gp, prev_tangent, M, a_tol)
@@ -58,17 +57,16 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 		# Create the extended system for corrector
 		N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
 		F = lambda x: np.append(G(x[0:M], x[M]), N(x))
-		dF = jacobian(F) # TODO: Replace by either analytic Jacobian or finite differences
+		dF_w = lambda x, w: (F(x + r_diff * w) - F(x)) / r_diff
 
-		# TODO: Do bifurcation detection and handling later. First pass now
 		# Test for bifurcation point
-		tau_bifurcation = tf.test_fn_bifurcation(dF, np.append(u, p), l, r, M)
-		if prev_tau_bifurcation * tau_bifurcation < 0.0: # Bifurcation point detected
-			x_singular = _computeBifurcationPoint(dF, np.append(u, p), l, r, M, a_tol)
+		tau_bifurcation_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M)
+		if prev_tau_bifurcation_value * tau_bifurcation_value < 0.0: # Bifurcation point detected
+			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol)
 
 			# Also test the Jacobian to be sure. If test succesful, return.
-			if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
-				return np.array(u_path), np.array(p_path), [x_singular]
+			#if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
+			return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
@@ -90,11 +88,11 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 				# Updating the arclength step and tangent vector
 				ds = min(1.2*ds, ds_max)
 				prev_tangent = np.copy(tangent)
-				prev_tau_bifurcation = tau_bifurcation
+				prev_tau_bifurcation_value = tau_bifurcation_value
 
 				break
 			except:
-				# Decrease arclength if Newton routine needs more than max_it iterations
+				# Decrease arclength if the solver needs more than max_it iterations
 				ds = max(0.5*ds, ds_min)
 		else:
 			# This case should never happpen under normal circumstances
@@ -106,9 +104,9 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 
 	return np.array(u_path), np.array(p_path), []
 
-def _computeBifurcationPoint(dF, x_p, l, r, M, a_tol):
+def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol):
 	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
-	min_functional = lambda x: tf.test_fn_bifurcation(dF, x, l, r, M)**2
+	min_functional = lambda x: tf.test_fn_bifurcation(dF_w, x, l, r, M)**2
 	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
 	x_singular = min_result.x
 	return x_singular
