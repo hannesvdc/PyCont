@@ -1,13 +1,6 @@
-import autograd.numpy as np
+import numpy as np
 import scipy.linalg as lg
 import scipy.optimize as opt
-import scipy as sc
-#from autograd import jacobian
-np.seterr(all='ignore')
-sc.special.seterr(all='ignore')
-
-def _is_zero(x):
-    return np.abs(x) < 1.e-4
 
 def _find_all_zeros(f):
     t_range = np.linspace(0.0, 2.0*np.pi, 10**6 + 1)
@@ -46,7 +39,7 @@ def _computeCoefficients(Gu_v, Gp, x_s, phi, w, w_1, M):
     r_diff = 1.e-8
 
     # Compute a
-    Gu_phi = lambda x: Gu_v(x[0:M], x[M], phi) # R^{M+1} -> R^M
+    Gu_phi = lambda x: Gu_v(x[0:M], x[M], phi)
     a = np.dot(phi, (Gu_phi(x_s + r_diff * np.append(phi, 0.0)) - Gu_phi(x_s)) / r_diff)
 
     # Compute b
@@ -60,39 +53,8 @@ def _computeCoefficients(Gu_v, Gp, x_s, phi, w, w_1, M):
     return a, b, c
 
 def _solveABSystem(a, b, c):
-    #solutions = []
-    #f = lambda alpha: a*alpha**2 + 2.0*b*alpha*np.sqrt(1.0 - alpha**2) + c*(1.0 - alpha**2)
-
-    # We go through separate cases for speed and ease of calculations
-    # special_case = False
-    # if _is_zero(a) and _is_zero(c):
-    #     alpha_1 = 0.0
-    #     alpha_2 = 1.0
-    #     special_case = True
-    # elif _is_zero(c):
-    #     alpha_1 = 0.0
-    #     g = lambda alpha: a*alpha + 2.0*b*np.sqrt(1.0 - alpha**2)
-    #     alpha_2 = opt.fsolve(g, 0.5)[0]
-    #     special_case = True
-    # elif _is_zero(a):
-    #     alpha_1 = 0.0
-    #     g = lambda alpha: 2.0*b*alpha + c*np.sqrt(1.0 - alpha**2)
-    #     alpha_2 = opt.fsolve(g, 0.5)[0]
-    #     special_case = True
-    # elif _is_zero(a - c): # Double roots are posssible, avoid deflation
-    #     alpha_1 = opt.fsolve(f, 0.0)[0]
-    #     alpha_2 = np.sqrt(1.0 - alpha_1**2)
-    #     special_case = True
-
-    f_full = lambda y: a*y[0]**2 + 2*b*y[0]*y[1] + c*y[1]**2
-    #if special_case:
-    #    print('alpha', alpha_1, alpha_2, f(alpha_1), f(alpha_2))
-    #    solutions.append(np.array([ alpha_1,  np.sqrt(1.0 - alpha_1**2)]))
-    #    solutions.append(np.array([ alpha_2,  np.sqrt(1.0 - alpha_2**2)]))
-    #    solutions.append(np.array([-alpha_1, -np.sqrt(1.0 - alpha_1**2)]))
-    #    solutions.append(np.array([-alpha_2, -np.sqrt(1.0 - alpha_2**2)]))
-    #else:
-    solutions = _find_all_zeros(f_full)
+    f = lambda y: a*y[0]**2 + 2*b*y[0]*y[1] + c*y[1]**2
+    solutions = _find_all_zeros(f)
 
     return solutions
 
