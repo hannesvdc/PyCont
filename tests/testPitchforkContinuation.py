@@ -7,18 +7,15 @@ import matplotlib.pyplot as plt
 import Continuation as cont
 
 def PitchforkTest():
-	G = lambda x, r: r*x[0] - x[0]**3
-	dGdx = lambda x, r: np.array([[r - 3.0*x[0]**2]])
-	dGdr = lambda x, r: np.array([x[0]])
+	G = lambda x, r: np.array([r*x[0] - x[0]**3])
+	u0 = np.array([-2.0])
+	p0 = 4.0
 
 	ds_max = 0.001
 	ds_min = 1.e-6
-	ds = 0.1
-
+	ds = 0.001
 	N = 10000
-	u0 = np.array([-2.0])
-	p0 = 4.0
-	continuation_result = cont.pseudoArclengthContinuation(G, dGdx, dGdr, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
+	continuation_result = cont.pseudoArclengthContinuation(G, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
 	# Print some Internal info
 	print('\nNumber of Branches:', len(continuation_result.branches))

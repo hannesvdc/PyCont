@@ -20,7 +20,7 @@ The arguments are:
 	- a_tol: The absolute tolerance for the Newton-Raphson solver
 """
 def computeTangent(u, p, Gu_v, Gp, prev_tau, M, a_tol):
-	DG = slg.LinearOperator((M+1, M+1), matvec=lambda v: Gu_v(u, p, v))
+	DG = slg.LinearOperator((M, M), matvec=lambda v: Gu_v(u, p, v))
 	tau = slg.gmres(DG, -Gp(u, p), x0=prev_tau[:M], atol=a_tol)[0]
 	tangent = np.append(tau, 1.0)
 	tangent = tangent / lg.norm(tangent)
@@ -49,7 +49,8 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 	rng = rd.RandomState()
 	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
 	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
-	prev_tau_bifurcation_value = 0.0
+	prev_tau_value = 0.0
+	prev_tau_vector = np.zeros(M+2)
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		tangent = computeTangent(u, p, Gu_v, Gp, prev_tangent, M, a_tol)
@@ -60,9 +61,11 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 		dF_w = lambda x, w: (F(x + r_diff * w) - F(x)) / r_diff
 
 		# Test for bifurcation point
-		tau_bifurcation_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M)
-		if prev_tau_bifurcation_value * tau_bifurcation_value < 0.0: # Bifurcation point detected
-			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol)
+		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector, a_tol)
+		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
+			print('Sign change detected', prev_tau_value, tau_value)
+			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol, tau_vector)
+			print('x_singular:', x_singular)
 
 			# Also test the Jacobian to be sure. If test succesful, return.
 			#if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
@@ -88,7 +91,8 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 				# Updating the arclength step and tangent vector
 				ds = min(1.2*ds, ds_max)
 				prev_tangent = np.copy(tangent)
-				prev_tau_bifurcation_value = tau_bifurcation_value
+				prev_tau_value = tau_value
+				prev_tau_vector = tau_vector
 
 				break
 			except:
@@ -104,9 +108,16 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 
 	return np.array(u_path), np.array(p_path), []
 
-def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol):
-	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
-	min_functional = lambda x: tf.test_fn_bifurcation(dF_w, x, l, r, M)**2
-	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
-	x_singular = min_result.x
-	return x_singular
+def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol, tau_vector):
+	# Use the tau_vector found during continuation as fixed initial guess
+	def functional(x):
+		output = tf.test_fn_bifurcation(dF_w, x, l, r, M, tau_vector, a_tol)
+		return output[1]**2 # Return the tf value squared for minimization
+	optimize_result = opt.minimize(functional, x_p, tol=a_tol)
+	return optimize_result.x
+# def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol):
+# 	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
+# 	min_functional = lambda x: tf.test_fn_bifurcation(dF_w, x, l, r, M)**2
+# 	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
+# 	x_singular = min_result.x
+# 	return x_singular

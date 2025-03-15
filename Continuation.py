@@ -37,9 +37,8 @@ def _recursiveContinuation(G, Gu_v, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, 
     
     # Do regular continuation on this branch
     u_path, p_path, bf_points = pac.continuation(G, Gu_v, Gp, u0, p0, tangent, ds_min, ds_max, ds, N, a_tol=tolerance, max_it=10)
-    stability = eigf.is_stable(Gu_v, u_path, p_path)
     u_path = np.transpose(u_path)[0]
-    result.branches.append({'u': u_path, 'p': p_path, 'is_stable': stability})
+    result.branches.append({'u': u_path, 'p': p_path})
 
     # If there are no bifurcation points on this path, return
     if len(bf_points) == 0:
