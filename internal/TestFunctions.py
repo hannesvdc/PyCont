@@ -14,4 +14,4 @@ def test_fn_bifurcation(dF_w, x, l, r, M, y_prev, a_tol):
 	if result[1] > 0:
 		print('Bifurcation Test did not converge', lg.norm(sys.matvec(y) - rhs))
 
-	return y, y[M+1]
+	return y, y[M+1], result[1] == 0

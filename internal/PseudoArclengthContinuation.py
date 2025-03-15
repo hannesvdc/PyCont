@@ -61,8 +61,11 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 		dF_w = lambda x, w: (F(x + r_diff * w) - F(x)) / r_diff
 
 		# Test for bifurcation point
-		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector, a_tol)
-		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
+		tau_vector, tau_value, tau_convergence = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector, a_tol)
+		if not tau_convergence: # Error along the current branch
+			print('Error along the current branch. Returning.')
+			return np.array(u_path), np.array(p_path), []
+		elif prev_tau_value * tau_value < 0.0: # Bifurcation point detected
 			print('Sign change detected', prev_tau_value, tau_value)
 			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol, tau_vector)
 			print('x_singular:', x_singular)
@@ -70,7 +73,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
-			# Predictor: Extrapolation
+			# Predictor: Follow the tangent vector
 			u_p = u + tangent[0:M] * ds
 			p_p = p + tangent[M]   * ds
 			x_p = np.append(u_p, p_p)
