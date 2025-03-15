@@ -66,9 +66,6 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 			print('Sign change detected', prev_tau_value, tau_value)
 			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol, tau_vector)
 			print('x_singular:', x_singular)
-
-			# Also test the Jacobian to be sure. If test succesful, return.
-			#if lg.norm(x_singular - np.append(u, p)) < 1.e-1 and np.abs(lg.det(dF(x_singular))) < 1.e-4:
 			return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Our implementation uses adaptive timetepping
@@ -109,15 +106,8 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 	return np.array(u_path), np.array(p_path), []
 
 def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol, tau_vector):
-	# Use the tau_vector found during continuation as fixed initial guess
-	def functional(x):
+	def functional(x): # Use the tau_vector found during continuation as fixed initial guess
 		output = tf.test_fn_bifurcation(dF_w, x, l, r, M, tau_vector, a_tol)
 		return output[1]**2 # Return the tf value squared for minimization
 	optimize_result = opt.minimize(functional, x_p, tol=a_tol)
 	return optimize_result.x
-# def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol):
-# 	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
-# 	min_functional = lambda x: tf.test_fn_bifurcation(dF_w, x, l, r, M)**2
-# 	min_result = opt.minimize(min_functional, x_p, tol=a_tol)
-# 	x_singular = min_result.x
-# 	return x_singular
