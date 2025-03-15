@@ -1,13 +1,38 @@
-import autograd.numpy as np
-import autograd.numpy.linalg as lg
-import autograd.numpy.random as rd
+import numpy as np
+import numpy.linalg as lg
+import numpy.random as rd
+import scipy.sparse.linalg as slg
 import scipy.optimize as opt
 from autograd import jacobian
 
 import NewtonRaphson as nr
 import internal.TestFunctions as tf
 
-def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, sign=1.0):
+"""
+This function computes the tangent to the curve at a given point by solving D_u G * tau = - G_p.
+The tangent vector then is [tau, 1] with normalization.
+
+The arguments are:
+	- u: The current state variable
+	- p: The current parameter
+	- Gu_v: The Jacobian of the system with respect to the state variable as a function of u, p, v
+	- Gp: The Jacobian of the system with respect to the parameter as a function of u and p
+	- prev_tau: The previous tangent vector (used for initial guess)
+	- M: The size of the state variable
+	- a_tol: The absolute tolerance for the Newton-Raphson solver
+"""
+def computeTangent(u, p, Gu_v, Gp, prev_tau, M, a_tol):
+	DG = slg.LinearOperator((M+1, M+1), matvec=lambda v: Gu_v(u, p, v))
+	tau = slg.gmres(DG, -Gp(u, p), x0=prev_tau[:M], atol=a_tol)[0]
+	tangent = np.append(tau, 1.0)
+	tangent = tangent / lg.norm(tangent)
+
+	# Make sure the new tangent vector points in the same rough direction as the previous one
+	if np.dot(tangent, prev_tau) < 0.0:
+		tangent = -tangent
+	return tangent
+
+def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, sign=1.0):
 	M = u0.size
 	u = np.copy(u0) # Always the previous point on the curve
 	p = np.copy(p0)	# Always the previous point on the curve
@@ -28,16 +53,14 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 	prev_tau_bifurcation = 0.0
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
-		# By solving an underdetermined system with quadratic constraint norm(tau)**2 = 1
-		Gu = dGdu(u, p)
-		Gp = dGdp(u, p)
-		tangent = computeTangent(Gu, Gp, prev_tangent, M, a_tol)
+		tangent = computeTangent(u, p, Gu_v, Gp, prev_tangent, M, a_tol)
 
 		# Create the extended system for corrector
 		N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
 		F = lambda x: np.append(G(x[0:M], x[M]), N(x))
-		dF = jacobian(F) # Replace by analytic formula later
+		dF = jacobian(F) # TODO: Replace by either analytic Jacobian or finite differences
 
+		# TODO: Do bifurcation detection and handling later. First pass now
 		# Test for bifurcation point
 		tau_bifurcation = tf.test_fn_bifurcation(dF, np.append(u, p), l, r, M)
 		if prev_tau_bifurcation * tau_bifurcation < 0.0: # Bifurcation point detected
@@ -55,12 +78,12 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 			x_p = np.append(u_p, p_p)
 
 			# Corrector: Newton-Raphson
-			result = nr.Newton(F, dF, x_p, a_tol=a_tol, max_it=max_it)
-
-			# Adaptive timestepping
-			if result.success:
-				u = result.x[0:M]
-				p = result.x[M]
+			try:
+				x_result = opt.newton_krylov(F, x_p, f_tol=a_tol, maxiter=max_it, verbose=False)
+				
+				# Bookkeeping for the next step
+				u = x_result[0:M]
+				p = x_result[M]
 				u_path.append(u)
 				p_path.append(p)
 
@@ -68,10 +91,11 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 				ds = min(1.2*ds, ds_max)
 				prev_tangent = np.copy(tangent)
 				prev_tau_bifurcation = tau_bifurcation
-				break
 
-			# Decrease arclength if Newton routine needs more than max_it iterations
-			ds = max(0.5*ds, ds_min)
+				break
+			except:
+				# Decrease arclength if Newton routine needs more than max_it iterations
+				ds = max(0.5*ds, ds_min)
 		else:
 			# This case should never happpen under normal circumstances
 			print('Minimal Arclength Size is too large. Aborting.')
@@ -81,19 +105,6 @@ def continuation(G, dGdu, dGdp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, 
 		print(print_str)
 
 	return np.array(u_path), np.array(p_path), []
-
-def computeTangent(Gu, Gp, prev_tau, M, a_tol):
-	# Setup extended jacobian
-	DG = np.zeros((M,M+1)) 
-	DG[0:M, 0:M] = Gu
-	DG[:,M] = Gp
-
-	# Do a version of quadratic programming (can we implement QP?)
-	g_tangent = lambda tau: np.append(np.dot(DG, tau), np.dot(tau, tau) - 1.0)
-	dg_tangent = jacobian(g_tangent) # Compute derivative analytically/numerically in future
-	tangent = nr.Newton(g_tangent, dg_tangent, prev_tau, a_tol=a_tol).x
-
-	return tangent
 
 def _computeBifurcationPoint(dF, x_p, l, r, M, a_tol):
 	# Find the bifurcation point by solving det(dF) = 0 (can become singular as well for pitchforks)
