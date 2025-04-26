@@ -17,7 +17,6 @@ def test_fn_bifurcation(dF_w, x, l, r, M, y_prev, eps_reg=1.e-6):
 	if y_prev is None or info > 0 or np.abs(y[M+1] ) > 100:
 		print('GMRES Failed, Switching to a Direct Solver with the full Jacobian.')
 		y = test_fn_bifurcation_exact(matvec, rhs)
-	print(y[M+1])
 	return y, y[M+1]
 
 def test_fn_bifurcation_exact(matvec, rhs):

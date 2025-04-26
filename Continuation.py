@@ -3,7 +3,6 @@ import numpy.linalg as lg
 
 import internal.PseudoArclengthContinuation as pac
 import internal.BranchSwitching as brs
-import internal.EigenFunctions as eigf
 
 
 class ContinuationResult:

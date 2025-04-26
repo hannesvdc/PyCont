@@ -24,13 +24,11 @@ def _computeNullspace(Gu, Gp, M):
     phi_constraint = opt.NonlinearConstraint(lambda y: np.dot(y, y) - 1.0, 0.0, 0.0)
     min_result = opt.minimize(phi_objective, phi_0, constraints=(phi_constraint))
     phi = min_result.x
-    print('phi residual', lg.norm(phi_objective(phi)), phi)
 
     w_objective = lambda y: np.sqrt(np.dot(Gu(y) + Gp, Gu(y) + Gp))
     min_result = opt.minimize(w_objective, np.zeros(M))
     w = min_result.x
     w_1 = np.append(w, 1.0)
-    print('w residual', lg.norm(w_objective(w)))
 
     return phi, w, w_1
 
