@@ -30,8 +30,7 @@ def computeTangent(u, p, Gu_v, Gp, prev_tau, M, a_tol):
 		tangent = -tangent
 	return tangent
 
-def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10):
-	r_diff = 1.e-8
+def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, r_diff=1.e-8):
 	M = u0.size
 	u = np.copy(u0) # Always the previous point on the curve
 	p = np.copy(p0)	# Always the previous point on the curve
@@ -41,16 +40,21 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 	print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(0, lg.norm(u), p)
 	print(print_str)
 
-	# Choose intial tangent (guess). No idea why yet, but we need to
-	# negate the tangent to find the actual search direction
+	# Choose intial tangent (guess). We need to negate to find the actual search direction
 	prev_tangent = -initial_tangent / lg.norm(initial_tangent)
 
-	# Variables for bifurcation detection
+	# Variables for test_fn bifurcation detection - 
+	# Ensure no component in the direction of the tangent
 	rng = rd.RandomState()
-	r = rng.normal(0.0, 1.0, M+1); r = r/lg.norm(r)
-	l = rng.normal(0.0, 1.0, M+1); l = l/lg.norm(l)
+	r = rng.normal(0.0, 1.0, M+1)
+	l = rng.normal(0.0, 1.0, M+1)
+	r = r - np.dot(r, prev_tangent) / np.dot(prev_tangent, prev_tangent) * prev_tangent
+	l = l - np.dot(l, prev_tangent) / np.dot(prev_tangent, prev_tangent) * prev_tangent
+	r = r / lg.norm(r)
+	l = l / lg.norm(l)
 	prev_tau_value = 0.0
-	prev_tau_vector = np.zeros(M+2)
+	prev_tau_vector = None
+
 	for n in range(1, N+1):
 		# Determine the tangent to the curve at current point
 		tangent = computeTangent(u, p, Gu_v, Gp, prev_tangent, M, a_tol)
@@ -61,11 +65,8 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 		dF_w = lambda x, w: (F(x + r_diff * w) - F(x)) / r_diff
 
 		# Test for bifurcation point
-		tau_vector, tau_value, tau_convergence = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector, a_tol)
-		if not tau_convergence: # Error along the current branch
-			print('Error along the current branch. Returning.')
-			return np.array(u_path), np.array(p_path), []
-		elif prev_tau_value * tau_value < 0.0: # Bifurcation point detected
+		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector)
+		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
 			print('Sign change detected', prev_tau_value, tau_value)
 			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol, tau_vector)
 			print('x_singular:', x_singular)
@@ -93,6 +94,8 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 				prev_tangent = np.copy(tangent)
 				prev_tau_value = tau_value
 				prev_tau_vector = tau_vector
+				#prev_eigval = min_eigval
+				#prev_eigvec = min_eigvec
 
 				break
 			except:
@@ -110,7 +113,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 
 def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol, tau_vector):
 	def functional(x): # Use the tau_vector found during continuation as fixed initial guess
-		output = tf.test_fn_bifurcation(dF_w, x, l, r, M, tau_vector, a_tol)
+		output = tf.test_fn_bifurcation(dF_w, x, l, r, M, tau_vector)
 		return output[1]**2 # Return the tf value squared for minimization
 	optimize_result = opt.minimize(functional, x_p, tol=a_tol)
 	return optimize_result.x
