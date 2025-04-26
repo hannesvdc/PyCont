@@ -30,7 +30,7 @@ def computeTangent(u, p, Gu_v, Gp, prev_tau, M, a_tol):
 		tangent = -tangent
 	return tangent
 
-def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_tol=1.e-10, max_it=10, r_diff=1.e-8):
+def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_steps, a_tol=1.e-10, max_it=10, r_diff=1.e-8):
 	M = u0.size
 	u = np.copy(u0) # Always the previous point on the curve
 	p = np.copy(p0)	# Always the previous point on the curve
@@ -55,7 +55,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 	prev_tau_value = 0.0
 	prev_tau_vector = None
 
-	for n in range(1, N+1):
+	for n in range(1, N_steps+1):
 		# Determine the tangent to the curve at current point
 		tangent = computeTangent(u, p, Gu_v, Gp, prev_tangent, M, a_tol)
 
@@ -63,14 +63,6 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 		N = lambda x: np.dot(tangent, x - np.append(u, p)) + ds
 		F = lambda x: np.append(G(x[0:M], x[M]), N(x))
 		dF_w = lambda x, w: (F(x + r_diff * w) - F(x)) / r_diff
-
-		# Test for bifurcation point
-		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u, p), l, r, M, prev_tau_vector)
-		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
-			print('Sign change detected', prev_tau_value, tau_value)
-			x_singular = _computeBifurcationPoint(dF_w, np.append(u, p), l, r, M, a_tol, tau_vector)
-			print('x_singular:', x_singular)
-			return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Our implementation uses adaptive timetepping
 		while ds > ds_min:
@@ -82,21 +74,6 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 			# Corrector: Newton-Raphson
 			try:
 				x_result = opt.newton_krylov(F, x_p, f_tol=a_tol, maxiter=max_it, verbose=False)
-				
-				# Bookkeeping for the next step
-				u = x_result[0:M]
-				p = x_result[M]
-				u_path.append(u)
-				p_path.append(p)
-
-				# Updating the arclength step and tangent vector
-				ds = min(1.2*ds, ds_max)
-				prev_tangent = np.copy(tangent)
-				prev_tau_value = tau_value
-				prev_tau_vector = tau_vector
-				#prev_eigval = min_eigval
-				#prev_eigvec = min_eigvec
-
 				break
 			except:
 				# Decrease arclength if the solver needs more than max_it iterations
@@ -105,6 +82,28 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N, a_
 			# This case should never happpen under normal circumstances
 			print('Minimal Arclength Size is too large. Aborting.')
 			return u_path, p_path, []
+		u_new = x_result[0:M]
+		p_new = x_result[M]
+
+		# Do bifurcation detection in the new point
+		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u_new, p_new), l, r, M, prev_tau_vector)
+		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
+			print('Sign change detected', prev_tau_value, tau_value)
+			x_singular = _computeBifurcationPoint(dF_w, np.append(u_new, p_new), l, r, M, a_tol, tau_vector)
+			print('x_singular:', x_singular)
+			return np.array(u_path), np.array(p_path), [x_singular]
+
+		# Bookkeeping for the next step
+		u = np.copy(u_new)
+		p = np.copy(p_new)
+		u_path.append(u)
+		p_path.append(p)
+
+		# Updating the arclength step and tangent vector
+		ds = min(1.2*ds, ds_max)
+		prev_tangent = np.copy(tangent)
+		prev_tau_value = tau_value
+		prev_tau_vector = tau_vector
 		
 		print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)

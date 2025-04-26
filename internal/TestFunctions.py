@@ -3,7 +3,7 @@ import numpy.linalg as lg
 import scipy.sparse.linalg as slg
 
 # Bifurcation Detection Test Function. We slightly regularize the system
-# for better numerical behavior.
+# for better numerical convergence behavior in L-GMRES.
 def test_fn_bifurcation(dF_w, x, l, r, M, y_prev, eps_reg=1.e-8):
 	def matvec(w):
 		el_1 = dF_w(x, w[0:M+1]) + eps_reg * w[0:M+1] + r*w[M+1]
