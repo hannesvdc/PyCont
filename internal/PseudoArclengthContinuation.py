@@ -74,6 +74,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_ste
 			# Corrector: Newton-Raphson
 			try:
 				x_result = opt.newton_krylov(F, x_p, f_tol=a_tol, maxiter=max_it, verbose=False)
+				ds = min(1.2*ds, ds_max)
 				break
 			except:
 				# Decrease arclength if the solver needs more than max_it iterations
@@ -89,7 +90,7 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_ste
 		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u_new, p_new), l, r, M, prev_tau_vector)
 		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
 			print('Sign change detected', prev_tau_value, tau_value)
-			x_singular = _computeBifurcationPoint(dF_w, np.append(u_new, p_new), l, r, M, a_tol, tau_vector)
+			x_singular = _computeBifurcationPointBisect(dF_w, np.append(u, p), np.append(u_new, p_new), l, r, M, a_tol, prev_tau_vector)
 			print('x_singular:', x_singular)
 			return np.array(u_path), np.array(p_path), [x_singular]
 
@@ -98,21 +99,56 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_ste
 		p = np.copy(p_new)
 		u_path.append(u)
 		p_path.append(p)
-
-		# Updating the arclength step and tangent vector
-		ds = min(1.2*ds, ds_max)
 		prev_tangent = np.copy(tangent)
 		prev_tau_value = tau_value
 		prev_tau_vector = tau_vector
 		
+		# Print the status
 		print_str = 'Step n: {0:3d}\t u: {1:4f}\t p: {2:4f}'.format(n, lg.norm(u), p)
 		print(print_str)
 
 	return np.array(u_path), np.array(p_path), []
 
-def _computeBifurcationPoint(dF_w, x_p, l, r, M, a_tol, tau_vector):
-	def functional(x): # Use the tau_vector found during continuation as fixed initial guess
-		output = tf.test_fn_bifurcation(dF_w, x, l, r, M, tau_vector)
-		return output[1]**2 # Return the tf value squared for minimization
-	optimize_result = opt.minimize(functional, x_p, tol=a_tol)
-	return optimize_result.x
+def _computeBifurcationPointBisect(dF_w, x_start, x_end, l, r, M, a_tol, tau_vector_prev, max_bisect_steps=30):
+	"""
+	Localizes the bifurcation point between x_start and x_end using bisection.
+
+    Parameters:
+        dF_w: function for Jacobian-vector product
+        x_start: array (M+1,), start point [u, p]
+        x_end: array (M+1,), end point [u, p]
+        l, r: random bifurcation detection vectors (fixed)
+        M: dimension of u
+        a_tol: absolute tolerance for Newton solver
+        tau_vector_prev: previous tau_vector (can be None)
+        max_bisect_steps: maximum allowed bisection steps
+
+    Returns:
+        x_bifurcation: array (M+1,), approximated bifurcation point
+    """
+
+	# Compute tau at start and end
+	_, tau_start = tf.test_fn_bifurcation(dF_w, x_start, l, r, M, tau_vector_prev)
+	_, tau_end = tf.test_fn_bifurcation(dF_w, x_end, l, r, M, tau_vector_prev)
+
+	# Check that a sign change really exists
+	assert tau_start * tau_end < 0.0, "No sign change detected between start and end points."
+
+	for step in range(max_bisect_steps):
+		x_mid = 0.5 * (x_start + x_end)
+		_, tau_mid = tf.test_fn_bifurcation(dF_w, x_mid, l, r, M, tau_vector_prev)
+
+		# Narrow the interval based on sign of tau
+		if tau_start * tau_mid < 0.0:
+			x_end = x_mid
+			tau_end = tau_mid
+		else:
+			x_start = x_mid
+			tau_start = tau_mid
+
+		# Convergence check
+		if np.linalg.norm(x_end - x_start) < a_tol:
+			return 0.5 * (x_start + x_end)
+
+	print('Warning: Bisection reached maximum steps without full convergence.')
+	return 0.5 * (x_start + x_end)

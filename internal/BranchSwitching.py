@@ -49,7 +49,6 @@ def _computeCoefficients(Gu_v, Gp, x_s, phi, w, w_1, M):
     # Compute c
     c = np.dot(phi, (Gx_w(x_s + r_diff * w_1) - Gx_w(x_s)) / r_diff)
 
-    print('abc', a, b, c)
     return a, b, c
 
 def _solveABSystem(a, b, c):
@@ -72,6 +71,7 @@ def branchSwitching(G, Gu_v, Gp, x_s, x_prev):
 
     # Fina all 4 branch tangents
     directions = []
+    tangents = []
     for n in range(len(solutions)):
         alpha = solutions[n][0]
         beta  = solutions[n][1]
@@ -81,13 +81,13 @@ def branchSwitching(G, Gu_v, Gp, x_s, x_prev):
         F_branch = lambda x: np.append(G(x[0:M], x[M]), N(x))
 
         tangent = np.append(alpha*phi + beta/np.sqrt(1.0)*w, beta/np.sqrt(1.0))
-        print('branch tangent', tangent, phi, w)
         x0 = x_s + s * tangent / lg.norm(tangent)
         dir = opt.newton_krylov(F_branch, x0)
 
         directions.append(dir)
+        tangents.append(tangent)
 
-    #Remove the direction where we came from
+    # Remove the direction where we came from
     inner_prodct = -np.inf
     for n in range(len(directions)):
         inner_pd = np.dot(directions[n]-x_s, x_prev-x_s) / (lg.norm(directions[n]-x_s) * lg.norm(x_prev-x_s))
@@ -95,7 +95,8 @@ def branchSwitching(G, Gu_v, Gp, x_s, x_prev):
             inner_prodct = inner_pd
             idx = n
     directions.pop(idx)
-    print('directions', directions)
+    tangents.pop(idx)
+    print('Branch Switching Directions:', directions)
 
     # Returning 3 continuation directions
-    return directions
+    return directions, tangents

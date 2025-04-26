@@ -54,9 +54,9 @@ def _recursiveContinuation(G, Gu_v, Gp, u0, p0, tangent, M, ds_min, ds_max, ds, 
         
     # The bifurcation point is unique, do branch switching
     x_prev = np.append(u_path[-10], p_path[-10]) # x_prev just needs to be a point on the previous path close to the bf point
-    directions = brs.branchSwitching(G, Gu_v, Gp, x_singular, x_prev)
+    directions, tangents = brs.branchSwitching(G, Gu_v, Gp, x_singular, x_prev)
 
     # For each of the branches, run pseudo-arclength continuation
     for n in range(len(directions)):
         x0 = directions[n]
-        _recursiveContinuation(G, Gu_v, Gp, x0[0:M], x0[M], x0 - x_singular, M, ds_min, ds_max, ds, N, tolerance, result)
+        _recursiveContinuation(G, Gu_v, Gp, x0[0:M], x0[M], -tangents[n], M, ds_min, ds_max, ds, N, tolerance, result)
