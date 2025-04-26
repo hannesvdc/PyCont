@@ -90,8 +90,9 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_ste
 		tau_vector, tau_value = tf.test_fn_bifurcation(dF_w, np.append(u_new, p_new), l, r, M, prev_tau_vector)
 		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
 			print('Sign change detected', prev_tau_value, tau_value)
-			x_singular = _computeBifurcationPointBisect(dF_w, np.append(u, p), np.append(u_new, p_new), l, r, M, a_tol, prev_tau_vector)
-			return np.array(u_path), np.array(p_path), [x_singular]
+			is_bf, x_singular = _computeBifurcationPointBisect(dF_w, np.append(u, p), np.append(u_new, p_new), l, r, M, a_tol, prev_tau_vector)
+			if is_bf:
+				return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Bookkeeping for the next step
 		u = np.copy(u_new)
@@ -131,7 +132,9 @@ def _computeBifurcationPointBisect(dF_w, x_start, x_end, l, r, M, a_tol, tau_vec
 	_, tau_end = tf.test_fn_bifurcation(dF_w, x_end, l, r, M, tau_vector_prev)
 
 	# Check that a sign change really exists
-	assert tau_start * tau_end < 0.0, "No sign change detected between start and end points."
+	if  tau_start * tau_end > 0.0:
+		print("No sign change detected between start and end points.")
+		return False, x_end
 
 	for step in range(max_bisect_steps):
 		x_mid = 0.5 * (x_start + x_end)
@@ -147,7 +150,7 @@ def _computeBifurcationPointBisect(dF_w, x_start, x_end, l, r, M, a_tol, tau_vec
 
 		# Convergence check
 		if np.linalg.norm(x_end - x_start) < a_tol:
-			return 0.5 * (x_start + x_end)
+			return True, 0.5 * (x_start + x_end)
 
 	print('Warning: Bisection reached maximum steps without full convergence.')
-	return 0.5 * (x_start + x_end)
+	return True, 0.5 * (x_start + x_end)

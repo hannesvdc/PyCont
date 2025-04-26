@@ -7,9 +7,7 @@ import matplotlib.pyplot as plt
 import Continuation as cont
 
 def FoldTest():
-	f = lambda x, r: r + x[0]**2
-	dfdx = lambda x, r: np.array([[2.0*x[0]]])
-	dfdr = lambda x, r: np.array([1.0])
+	f = lambda x, r: np.array([r + x[0]**2])
 
 	u0 = np.array([-5.0])
 	p0 = -u0[0]**2
@@ -18,7 +16,7 @@ def FoldTest():
 	ds_min = 1.e-6
 	ds = 0.1
 	N = 5000
-	continuation_result = cont.pseudoArclengthContinuation(f, dfdx, dfdr, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
+	continuation_result = cont.pseudoArclengthContinuation(f, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
 	# Print some Internal info
 	print('\nNumber of Branches:', len(continuation_result.branches))
@@ -42,8 +40,3 @@ def FoldTest():
 
 if __name__ == '__main__':
 	FoldTest()
-
-
-
-
-
