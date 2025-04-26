@@ -91,7 +91,6 @@ def continuation(G, Gu_v, Gp, u0, p0, initial_tangent, ds_min, ds_max, ds, N_ste
 		if prev_tau_value * tau_value < 0.0: # Bifurcation point detected
 			print('Sign change detected', prev_tau_value, tau_value)
 			x_singular = _computeBifurcationPointBisect(dF_w, np.append(u, p), np.append(u_new, p_new), l, r, M, a_tol, prev_tau_vector)
-			print('x_singular:', x_singular)
 			return np.array(u_path), np.array(p_path), [x_singular]
 
 		# Bookkeeping for the next step
