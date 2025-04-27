@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pycont"
+name = "pycont-lite"
 version = "0.1.0"
 description = "Lightweight matrix-free pseudo-arclength continuation with bifurcation detection and branch switching."
 authors = [
