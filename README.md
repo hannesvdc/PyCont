@@ -17,7 +17,7 @@ with automatic detection of bifurcation points and branch switching. In particul
 Installation
 ---
 ```
-pip install pycont
+pip install pycont-lite
 ```
 
 Minimal Working Example (Pitchfork Bifurcation)
