@@ -1,10 +1,7 @@
-import sys
-sys.path.append("../")
-
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 
-import Continuation as cont
+from pycont import continuation
 
 def FoldTest():
 	f = lambda x, r: np.array([r + x[0]**2])
@@ -16,7 +13,7 @@ def FoldTest():
 	ds_min = 1.e-6
 	ds = 0.1
 	N = 5000
-	continuation_result = cont.pseudoArclengthContinuation(f, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
+	continuation_result = continuation.pseudoArclengthContinuation(f, u0, p0, ds_min, ds_max, ds, N, tolerance=1.e-10)
 
 	# Print some Internal info
 	print('\nNumber of Branches:', len(continuation_result.branches))

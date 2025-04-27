@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycont"
+version = "0.1.0"
+description = "Lightweight matrix-free pseudo-arclength continuation with bifurcation detection."
+authors = [
+    { name="Your Name", email="your@email.com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/pycont"
+Documentation = "https://github.com/yourusername/pycont"
+Source = "https://github.com/yourusername/pycont"
