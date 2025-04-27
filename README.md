@@ -1,6 +1,6 @@
-# PyCont
+# PyCont-Lite
 
-**PyCont** is a simple, matrix-free pseudo-arclength continuation library for solving parametric nonlinear systems of the form
+**PyCont-Lite** is a simple, matrix-free pseudo-arclength continuation library for solving parametric nonlinear systems of the form
 
 $$
 G(u, p) = 0
@@ -65,8 +65,8 @@ Acknowledgement
 --- 
 I started this project because there are (in my opinion) no good, lightweight, and easy to use numerical continuation packages 
 in the python ecosystem. These days, researchers are too often forced to use ancient Fortran packages like AUTO, or language-specific 
-tools like MATCONT in Matlab. PyCont seeks to create an elegent package with all features for Python - the default language for
+tools like MATCONT in Matlab. PyCont-Lite seeks to create an elegent package with all features for Python - the default language for
 scientific computing and machine learning. 
 
-If you want to see new features, either contact me or write a pull request. I will continue updating PyCont based on my own needs, and soon
+If you want to see new features, either contact me or write a pull request. I will continue updating PyCont-Lite based on my own needs, and soon
 PyCont will include Hopf bifurcation detection and limit cycle detection. For questions or requests, feel free to contact me at hannesvdc[at]gmail[dot]com. 
