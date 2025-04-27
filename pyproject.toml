@@ -18,6 +18,6 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hannesvdc/PyCont"
-Documentation = "https://github.com/hannesvdc/PyCont"
-Source = "https://github.com/hannesvdc/PyCont"
+Homepage = "https://github.com/hannesvdc/PyCont-Lite"
+Documentation = "https://github.com/hannesvdc/PyCont-Lite"
+Source = "https://github.com/hannesvdc/PyCont-Lite"
