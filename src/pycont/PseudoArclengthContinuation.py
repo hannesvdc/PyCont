@@ -4,7 +4,7 @@ import numpy.random as rd
 import scipy.sparse.linalg as slg
 import scipy.optimize as opt
 
-import internal.TestFunctions as tf
+from . import TestFunctions as tf
 
 """
 This function computes the tangent to the curve at a given point by solving D_u G * tau = - G_p.

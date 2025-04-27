@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pycont"
 version = "0.1.0"
-description = "Lightweight matrix-free pseudo-arclength continuation with bifurcation detection."
+description = "Lightweight matrix-free pseudo-arclength continuation with bifurcation detection and branch switching."
 authors = [
-    { name="Your Name", email="your@email.com" }
+    { name="Hannes Vandecasteele", email="hannesvdc@gmail.com" }
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -18,6 +18,6 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/pycont"
-Documentation = "https://github.com/yourusername/pycont"
-Source = "https://github.com/yourusername/pycont"
+Homepage = "https://github.com/hannesvdc/PyCont"
+Documentation = "https://github.com/hannesvdc/PyCont"
+Source = "https://github.com/hannesvdc/PyCont"
