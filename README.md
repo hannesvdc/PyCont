@@ -1,2 +1,72 @@
 # PyCont
-Pseudo-arclength continuation tool in Python
+
+**PyCont** is a simple, matrix-free pseudo-arclength continuation library for solving parametric nonlinear systems of the form
+
+$$
+G(u, p) = 0
+$$
+
+with automatic detection of bifurcation points and branch switching. In particular, PyCont uses
+
+- Matrix-free implementation through nonlinear Newton-Krylov solvers
+- Precise bifurcation point localization (via bisection)
+- Branch switching at bifurcation points
+- Lightweight and easy to integrate into your workflows
+- No derivatives or Jacobians needed! Everything works directly on the level of G(u, p).
+
+Installation
+---
+```
+pip install pycont
+```
+
+Minimal Working Example (Pitchfork Bifurcation)
+---
+<pre>
+import numpy as np
+import pycont
+import matplotlib.pyplot as plt
+
+# Define the pitchfork function
+def G(u, p):
+    return u**3 - p*u
+
+# Initial guess
+u0 = np.array([1e-2])
+p0 = 0.0
+
+# Run continuation
+continuation_result = pycont.pseudoArclengthContinuation(
+    G,
+    u0, p0,
+    ds_min=0.001,
+    ds_max=0.05,
+    ds=0.01,
+    N=200
+)
+
+# Plot the solution curve
+for n in range(len(continuation_result.branches)):
+		branch = continuation_result.branches[n]
+		ax.plot(branch['p'], branch['u'], 'blue')
+plt.xlabel('p')
+plt.ylabel('u')
+plt.title('Bifurcation diagram')
+plt.grid()
+plt.show()  
+</pre>
+
+
+License
+---
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+Acknowledgement
+--- 
+I started this project because there are (in my opinion) no good, lightweight, and easy to use numerical continuation packages 
+in the python ecosystem. These days, researchers are too often forced to use ancient Fortran packages like AUTO, or language-specific 
+tools like MATCONT in Matlab. PyCont seeks to create an elegent package with all features for Python - the default language for
+scientific computing and machine learning. 
+
+If you want to see new features, either contact me or write a pull request. I will continue updating PyCont based on my own needs, and soon
+PyCont will include Hopf bifurcation detection and limit cycle detection. For questions or requests, feel free to contact me at hannesvdc[at]gmail[dot]com. 
