@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycont"
+version = "0.1.0"
+description = "Lightweight matrix-free pseudo-arclength continuation with bifurcation detection and branch switching."
+authors = [
+    { name="Hannes Vandecasteele", email="hannesvdc@gmail.com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.urls]
+Homepage = "https://github.com/hannesvdc/PyCont"
+Documentation = "https://github.com/hannesvdc/PyCont"
+Source = "https://github.com/hannesvdc/PyCont"

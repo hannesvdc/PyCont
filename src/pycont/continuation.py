@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.linalg as lg
 
-import internal.PseudoArclengthContinuation as pac
-import internal.BranchSwitching as brs
+from . import PseudoArclengthContinuation as pac
+from . import BranchSwitching as brs
 
 
 class ContinuationResult:
