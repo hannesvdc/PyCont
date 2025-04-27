@@ -1,5 +1,7 @@
 # PyCont-Lite
 
+[![PyPI version](https://badge.fury.io/py/pycont-lite.svg)](https://badge.fury.io/py/pycont-lite)
+
 **PyCont-Lite** is a simple, matrix-free pseudo-arclength continuation library for solving parametric nonlinear systems of the form
 
 $$
